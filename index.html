@@ -1,135 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Argument Analyzer</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
-        textarea { width: 90%; height: 100px; margin-bottom: 10px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-        #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
-        .valid { color: green; font-weight: bold; }
-        .invalid { color: red; font-weight: bold; }
-        .sound { color: blue; font-weight: bold; }
-    </style>
-</head>
-<body>
+function analyzeArgument() {
+    let text = document.getElementById("argumentInput").value;
+    let premises = [];
+    let conclusion = "";
 
-    <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will break it into standard form, detect fallacies, identify assumptions, and check for soundness.</p>
-    <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
-    <button onclick="analyzeArgument()">Analyze</button>
+    // Keywords for detecting conclusions
+    const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
 
-    <div id="output"></div>
+    // Smart splitting: Keep "If...then" statements together
+    let sentences = text.match(/[^.!?]+[.!?]+|.+$/g) || []; // This correctly keeps complex statements together
 
-    <script>
-        function analyzeArgument() {
-            let text = document.getElementById("argumentInput").value;
-            let premises = [];
-            let conclusion = "";
+    for (let sentence of sentences) {
+        let lowerSentence = sentence.toLowerCase().trim();
 
-            // Keywords for premises and conclusions
-            const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
-            const premiseKeywords = ["because", "since", "as", "given that", "for the reason that"];
-
-            let sentences = text.split(/[.!?,;]\s+/); // Improved splitting logic
-
-            for (let sentence of sentences) {
-                let lowerSentence = sentence.toLowerCase();
-                if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
-                    conclusion = sentence;
-                } else if (sentence.includes("if") && sentence.includes("then")) { 
-                    let parts = sentence.split(/then\s+/);
-                    if (parts.length === 2) {
-                        premises.push(parts[0].trim() + " then " + parts[1].trim());
-                        premises.push(parts[1].trim()); 
-                    }
-                } else if (premiseKeywords.some(word => lowerSentence.includes(word))) {
-                    premises.push(sentence);
-                } else {
-                    premises.push(sentence);
-                }
-            }
-
-            if (premises.length >= 2 && !conclusion) {
-                conclusion = premises.pop(); 
-            }
-
-            // Step 1: Display Standard Form
-            let outputHTML = "<h3>Standard Form:</h3>";
-            premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
-            outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
-
-            // Step 2: Evaluate Argument Validity
-            let isValid = checkValidity(premises, conclusion);
-            outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid. The conclusion does not logically follow from the premises.</p>`;
-
-            // Step 3: Identify Assumptions
-            let assumptions = findAssumptions(premises, conclusion);
-            if (assumptions.length > 0) {
-                outputHTML += "<h3>Possible Assumptions:</h3>";
-                assumptions.forEach(a => outputHTML += `<p>- ${a}</p>`);
-            } else {
-                outputHTML += "<p class='valid'>✅ No hidden assumptions detected.</p>";
-            }
-
-            // Step 4: Check for Common Logical Fallacies
-            let fallacies = detectFallacies(premises, conclusion);
-            if (fallacies.length > 0) {
-                outputHTML += "<h3>Potential Fallacies Detected:</h3>";
-                fallacies.forEach(f => outputHTML += `<p class='invalid'>⚠️ ${f}</p>`);
-            } else {
-                outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
-            }
-
-            // Step 5: Evaluate Soundness
-            let isSound = checkSoundness(premises);
-            outputHTML += isSound ? `<p class='sound'>✔ This argument is sound. The premises are true and the argument is valid.</p>` : `<p class='invalid'>❌ This argument is unsound. At least one premise is questionable.</p>`;
-
-            document.getElementById("output").innerHTML = outputHTML;
+        // If the sentence contains a conclusion indicator, mark it as a conclusion
+        if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
+            conclusion = sentence;
+        } else {
+            premises.push(sentence); // Otherwise, it's a premise
         }
+    }
 
-        function checkValidity(premises, conclusion) {
-            if (premises.length < 2 || !conclusion) return false; 
-            let keywords = ["all", "if", "then", "must", "necessarily"];
-            return premises.some(p => keywords.some(k => p.toLowerCase().includes(k)));
-        }
+    // Ensure the last sentence is the conclusion if not explicitly found
+    if (premises.length >= 2 && !conclusion) {
+        conclusion = premises.pop();
+    }
 
-        function findAssumptions(premises, conclusion) {
-            let assumptions = [];
-            if (premises.length === 1) {
-                assumptions.push("The argument might require an additional premise to logically support the conclusion.");
-            }
-            if (conclusion && !conclusion.toLowerCase().includes("must") && premises.some(p => p.toLowerCase().includes("must"))) {
-                assumptions.push("The argument assumes necessity but does not explicitly justify it.");
-            }
-            return assumptions;
-        }
+    // Step 1: Display Standard Form
+    let outputHTML = "<h3>Standard Form:</h3>";
+    premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
+    outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
 
-        function detectFallacies(premises, conclusion) {
-            let fallacies = [];
+    // Step 2: Evaluate Argument Validity
+    let isValid = checkValidity(premises, conclusion);
+    outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid.</p>`;
 
-            if (premises.length === 1 && conclusion) {
-                fallacies.push("Hasty Generalization: The argument may be jumping to a conclusion too quickly.");
-            }
+    // Step 3: Detect Fallacies
+    let fallacies = detectFallacies(premises, conclusion);
+    if (fallacies.length > 0) {
+        outputHTML += "<h3>Potential Fallacies Detected:</h3>";
+        fallacies.forEach(f => outputHTML += `<p class='fallacy'>⚠️ ${f}</p>`);
+    } else {
+        outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
+    }
 
-            if (premises.some(p => p.toLowerCase().includes(conclusion.toLowerCase()))) {
-                fallacies.push("Circular Reasoning: The conclusion is assumed within the premises.");
-            }
+    // Step 4: Check Soundness
+    let isSound = checkSoundness(premises);
+    outputHTML += isSound ? `<p class='sound'>✔ This argument is sound.</p>` : `<p class='invalid'>❌ This argument is unsound.</p>`;
 
-            if (conclusion.toLowerCase().includes("either") && conclusion.toLowerCase().includes("or")) {
-                fallacies.push("False Dichotomy: The argument presents two options as if they are the only possibilities.");
-            }
-
-            return fallacies;
-        }
-
-        function checkSoundness(premises) {
-            const questionableStatements = ["ghosts exist", "aliens control the government", "the earth is flat"];
-            return !premises.some(p => questionableStatements.some(qs => p.toLowerCase().includes(qs)));
-        }
-    </script>
-
-</body>
-</html>
+    document.getElementById("output").innerHTML = outputHTML;
+}
