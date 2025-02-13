@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Argument Analyzer</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
+        textarea { width: 90%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
+    </style>
+</head>
+<body>
+
+    <h2>Argument Analyzer</h2>
+    <p>Enter an argument below, and the tool will analyze its structure.</p>
+    <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
+    <button onclick="analyzeArgument()">Analyze</button>
+
+    <div id="output"></div>
+
+    <script>
+        function analyzeArgument() {
+            let text = document.getElementById("argumentInput").value;
+            let premises = [];
+            let conclusion = "";
+
+            // Define keywords for detecting premises and conclusions
+            const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
+            const premiseKeywords = ["because", "since", "as", "given that", "for the reason that"];
+
+            let sentences = text.split(/[.!?]\s+/); // Split argument into sentences
+
+            for (let sentence of sentences) {
+                let lowerSentence = sentence.toLowerCase();
+                if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
+                    conclusion = sentence;
+                } else if (premiseKeywords.some(word => lowerSentence.includes(word))) {
+                    premises.push(sentence);
+                } else {
+                    premises.push(sentence);
+                }
+            }
+
+            // Display standard form
+            let outputHTML = "<h3>Standard Form:</h3>";
+            premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
+            outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
+
+            // Display analysis result
+            document.getElementById("output").innerHTML = outputHTML;
+        }
+   
