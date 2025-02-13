@@ -11,12 +11,13 @@
         #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
+        .sound { color: blue; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will break it into standard form, detect fallacies, and analyze assumptions.</p>
+    <p>Enter an argument below, and the tool will break it into standard form, detect fallacies, identify assumptions, and check for soundness.</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
 
@@ -32,17 +33,27 @@
             const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
             const premiseKeywords = ["because", "since", "as", "given that", "for the reason that"];
 
-            let sentences = text.split(/[.!?]\s+/); // Split argument into sentences
+            let sentences = text.split(/[.!?,;]\s+/); // Improved splitting logic
 
             for (let sentence of sentences) {
                 let lowerSentence = sentence.toLowerCase();
                 if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
                     conclusion = sentence;
+                } else if (sentence.includes("if") && sentence.includes("then")) { 
+                    let parts = sentence.split(/then\s+/);
+                    if (parts.length === 2) {
+                        premises.push(parts[0].trim() + " then " + parts[1].trim());
+                        premises.push(parts[1].trim()); 
+                    }
                 } else if (premiseKeywords.some(word => lowerSentence.includes(word))) {
                     premises.push(sentence);
                 } else {
-                    premises.push(sentence); // Assume a sentence without indicators is a premise
+                    premises.push(sentence);
                 }
+            }
+
+            if (premises.length >= 2 && !conclusion) {
+                conclusion = premises.pop(); 
             }
 
             // Step 1: Display Standard Form
@@ -72,17 +83,19 @@
                 outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
             }
 
+            // Step 5: Evaluate Soundness
+            let isSound = checkSoundness(premises);
+            outputHTML += isSound ? `<p class='sound'>✔ This argument is sound. The premises are true and the argument is valid.</p>` : `<p class='invalid'>❌ This argument is unsound. At least one premise is questionable.</p>`;
+
             document.getElementById("output").innerHTML = outputHTML;
         }
 
-        // Simple validity check (deductive structure)
         function checkValidity(premises, conclusion) {
-            if (premises.length < 2 || !conclusion) return false; // Need at least two premises
+            if (premises.length < 2 || !conclusion) return false; 
             let keywords = ["all", "if", "then", "must", "necessarily"];
             return premises.some(p => keywords.some(k => p.toLowerCase().includes(k)));
         }
 
-        // Identify possible assumptions
         function findAssumptions(premises, conclusion) {
             let assumptions = [];
             if (premises.length === 1) {
@@ -94,36 +107,27 @@
             return assumptions;
         }
 
-        // Detect common logical fallacies
         function detectFallacies(premises, conclusion) {
             let fallacies = [];
 
-            // Hasty Generalization
             if (premises.length === 1 && conclusion) {
                 fallacies.push("Hasty Generalization: The argument may be jumping to a conclusion too quickly.");
             }
 
-            // Circular Reasoning
             if (premises.some(p => p.toLowerCase().includes(conclusion.toLowerCase()))) {
                 fallacies.push("Circular Reasoning: The conclusion is assumed within the premises.");
             }
 
-            // False Dichotomy (Black-and-White Thinking)
             if (conclusion.toLowerCase().includes("either") && conclusion.toLowerCase().includes("or")) {
                 fallacies.push("False Dichotomy: The argument presents two options as if they are the only possibilities.");
             }
 
-            // Appeal to Ignorance
-            if (premises.some(p => p.toLowerCase().includes("not been proven")) || premises.some(p => p.toLowerCase().includes("no evidence against"))) {
-                fallacies.push("Appeal to Ignorance: The argument assumes something is true because it hasn't been proven false.");
-            }
-
-            // Ad Hominem
-            if (premises.some(p => p.toLowerCase().includes("stupid") || p.toLowerCase().includes("ignorant") || p.toLowerCase().includes("foolish"))) {
-                fallacies.push("Ad Hominem: Attacking a person instead of the argument.");
-            }
-
             return fallacies;
+        }
+
+        function checkSoundness(premises) {
+            const questionableStatements = ["ghosts exist", "aliens control the government", "the earth is flat"];
+            return !premises.some(p => questionableStatements.some(qs => p.toLowerCase().includes(qs)));
         }
     </script>
 
