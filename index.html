@@ -9,12 +9,14 @@
         textarea { width: 90%; height: 100px; margin-bottom: 10px; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
         #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
+        .valid { color: green; font-weight: bold; }
+        .invalid { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will analyze its structure.</p>
+    <h2>AI Argument Analyzer</h2>
+    <p>Enter an argument below, and the tool will break it into standard form, detect fallacies, and analyze assumptions.</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
 
@@ -26,7 +28,7 @@
             let premises = [];
             let conclusion = "";
 
-            // Define keywords for detecting premises and conclusions
+            // Keywords for premises and conclusions
             const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
             const premiseKeywords = ["because", "since", "as", "given that", "for the reason that"];
 
@@ -39,17 +41,89 @@
                 } else if (premiseKeywords.some(word => lowerSentence.includes(word))) {
                     premises.push(sentence);
                 } else {
-                    premises.push(sentence);
+                    premises.push(sentence); // Assume a sentence without indicators is a premise
                 }
             }
 
-            // Display standard form
+            // Step 1: Display Standard Form
             let outputHTML = "<h3>Standard Form:</h3>";
             premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
             outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
 
-            // Display analysis result
+            // Step 2: Evaluate Argument Validity
+            let isValid = checkValidity(premises, conclusion);
+            outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid. The conclusion does not logically follow from the premises.</p>`;
+
+            // Step 3: Identify Assumptions
+            let assumptions = findAssumptions(premises, conclusion);
+            if (assumptions.length > 0) {
+                outputHTML += "<h3>Possible Assumptions:</h3>";
+                assumptions.forEach(a => outputHTML += `<p>- ${a}</p>`);
+            } else {
+                outputHTML += "<p class='valid'>✅ No hidden assumptions detected.</p>";
+            }
+
+            // Step 4: Check for Common Logical Fallacies
+            let fallacies = detectFallacies(premises, conclusion);
+            if (fallacies.length > 0) {
+                outputHTML += "<h3>Potential Fallacies Detected:</h3>";
+                fallacies.forEach(f => outputHTML += `<p class='invalid'>⚠️ ${f}</p>`);
+            } else {
+                outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
+            }
+
             document.getElementById("output").innerHTML = outputHTML;
+        }
+
+        // Simple validity check (deductive structure)
+        function checkValidity(premises, conclusion) {
+            if (premises.length < 2 || !conclusion) return false; // Need at least two premises
+            let keywords = ["all", "if", "then", "must", "necessarily"];
+            return premises.some(p => keywords.some(k => p.toLowerCase().includes(k)));
+        }
+
+        // Identify possible assumptions
+        function findAssumptions(premises, conclusion) {
+            let assumptions = [];
+            if (premises.length === 1) {
+                assumptions.push("The argument might require an additional premise to logically support the conclusion.");
+            }
+            if (conclusion && !conclusion.toLowerCase().includes("must") && premises.some(p => p.toLowerCase().includes("must"))) {
+                assumptions.push("The argument assumes necessity but does not explicitly justify it.");
+            }
+            return assumptions;
+        }
+
+        // Detect common logical fallacies
+        function detectFallacies(premises, conclusion) {
+            let fallacies = [];
+
+            // Hasty Generalization
+            if (premises.length === 1 && conclusion) {
+                fallacies.push("Hasty Generalization: The argument may be jumping to a conclusion too quickly.");
+            }
+
+            // Circular Reasoning
+            if (premises.some(p => p.toLowerCase().includes(conclusion.toLowerCase()))) {
+                fallacies.push("Circular Reasoning: The conclusion is assumed within the premises.");
+            }
+
+            // False Dichotomy (Black-and-White Thinking)
+            if (conclusion.toLowerCase().includes("either") && conclusion.toLowerCase().includes("or")) {
+                fallacies.push("False Dichotomy: The argument presents two options as if they are the only possibilities.");
+            }
+
+            // Appeal to Ignorance
+            if (premises.some(p => p.toLowerCase().includes("not been proven")) || premises.some(p => p.toLowerCase().includes("no evidence against"))) {
+                fallacies.push("Appeal to Ignorance: The argument assumes something is true because it hasn't been proven false.");
+            }
+
+            // Ad Hominem
+            if (premises.some(p => p.toLowerCase().includes("stupid") || p.toLowerCase().includes("ignorant") || p.toLowerCase().includes("foolish"))) {
+                fallacies.push("Ad Hominem: Attacking a person instead of the argument.");
+            }
+
+            return fallacies;
         }
     </script>
 
