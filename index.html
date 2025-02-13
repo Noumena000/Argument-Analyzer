@@ -12,29 +12,26 @@
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
         .fallacy { color: orange; font-weight: bold; }
-        .sound { color: blue; font-weight: bold; }
+        .strong { color: blue; font-weight: bold; }
+        .weak { color: purple; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will break it into standard form, detect fallacies, identify assumptions, and check for soundness.</p>
+    <p>Enter an argument below, and the tool will analyze whether it's **deductive (valid/invalid)** or **inductive (strong/weak).**</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
 
     <div id="output"></div>
 
-    <!-- ✅ JavaScript should be inside <script> tags and placed at the bottom of <body> -->
     <script>
         function analyzeArgument() {
             let text = document.getElementById("argumentInput").value.trim();
             let premises = [];
             let conclusion = "";
 
-            // Keywords to identify conclusions
             const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
-
-            // Improved sentence detection that keeps "If...then" statements together
             let sentences = text.match(/(?:if\s[^.!?]+then\s[^.!?]+|[^.!?]+[.!?]+)/gi) || [];
 
             if (sentences.length === 0) {
@@ -46,7 +43,6 @@
                 sentence = sentence.trim();
                 let lowerSentence = sentence.toLowerCase();
 
-                // Identify conclusions
                 if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
                     conclusion = sentence;
                 } else {
@@ -54,21 +50,17 @@
                 }
             }
 
-            // Ensure the last sentence is the conclusion if none was found
             if (premises.length >= 2 && !conclusion) {
                 conclusion = premises.pop();
             }
 
-            // Step 1: Display Standard Form
             let outputHTML = "<h3>Standard Form:</h3>";
             premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
             outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
 
-            // Step 2: Evaluate Argument Validity
-            let isValid = checkValidity(premises, conclusion);
-            outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid.</p>`;
+            let argumentType = determineArgumentType(premises, conclusion);
+            outputHTML += argumentType;
 
-            // Step 3: Detect Fallacies
             let fallacies = detectFallacies(premises, conclusion);
             if (fallacies.length > 0) {
                 outputHTML += "<h3>Potential Fallacies Detected:</h3>";
@@ -77,16 +69,33 @@
                 outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
             }
 
-            // Step 4: Check Soundness
-            let isSound = checkSoundness(premises);
-            outputHTML += isSound ? `<p class='sound'>✔ This argument is sound.</p>` : `<p class='invalid'>❌ This argument is unsound.</p>`;
+            outputHTML += "<p><strong>Note:</strong> Soundness of a valid argument depends on the truth of each premise.</p>";
 
             document.getElementById("output").innerHTML = outputHTML;
         }
 
-        function checkValidity(premises, conclusion) {
-            if (premises.length < 2 || !conclusion) return false; 
-            return premises.some(p => conclusion.toLowerCase().includes(p.toLowerCase()));
+        function determineArgumentType(premises, conclusion) {
+            if (premises.length < 2 || !conclusion) return "<p class='invalid'>❌ Insufficient premises to determine validity.</p>";
+
+            let premiseWords = premises.map(p => p.toLowerCase().split(" "));
+            let conclusionWords = conclusion.toLowerCase().split(" ");
+
+            let matches = 0;
+            for (let word of conclusionWords) {
+                if (premiseWords.some(premise => premise.includes(word))) {
+                    matches++;
+                }
+            }
+
+            let matchPercentage = matches / conclusionWords.length;
+
+            if (matchPercentage > 0.75) {
+                return "<p class='valid'>✔ Deductive argument: Logically valid.</p>";
+            } else if (matchPercentage > 0.4) {
+                return "<p class='strong'>✔ Inductive argument: Strong reasoning.</p>";
+            } else {
+                return "<p class='weak'>❌ Inductive argument: Weak reasoning.</p>";
+            }
         }
 
         function detectFallacies(premises, conclusion) {
@@ -113,15 +122,6 @@
             }
 
             return fallacies;
-        }
-
-        function checkSoundness(premises) {
-            const questionableStatements = [
-                "ghosts exist", "aliens control the government", "the earth is flat",
-                "vaccines cause autism", "climate change is a hoax", "crystals have magical healing powers"
-            ];
-
-            return !premises.some(p => questionableStatements.some(qs => p.toLowerCase().includes(qs)));
         }
     </script>
 
