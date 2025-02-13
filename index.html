@@ -24,6 +24,7 @@
 
     <div id="output"></div>
 
+    <!-- ✅ JavaScript should be inside <script> tags and placed at the bottom of <body> -->
     <script>
         function analyzeArgument() {
             let text = document.getElementById("argumentInput").value.trim();
@@ -35,7 +36,7 @@
 
             // Improved sentence detection that keeps "If...then" statements together
             let sentences = text.match(/(?:if\s[^.!?]+then\s[^.!?]+|[^.!?]+[.!?]+)/gi) || [];
-            
+
             if (sentences.length === 0) {
                 document.getElementById("output").innerHTML = "<p class='invalid'>❌ No argument detected. Please enter a valid argument.</p>";
                 return;
