@@ -27,15 +27,15 @@
             let conclusion = "";
 
             sentences.forEach((sentence, index) => {
-                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
-                    conclusion = "Conclusion: " + sentence.replace(/(therefore|thus|hence|so)/i, "").trim();
+                if (/\b(therefore|thus|hence|so)\b/i.test(sentence)) {
+                    conclusion = "Conclusion: " + sentence.replace(/\b(therefore|thus|hence|so)\b/i, "").trim();
                 } else {
                     premises.push(`P${index + 1}: ${sentence}`);
                 }
             });
 
             if (!conclusion && premises.length > 1) {
-                conclusion = "Conclusion: " + premises.pop();
+                conclusion = "Conclusion: " + premises.pop().replace(/P\d+: /, "");
             } else if (!conclusion) {
                 conclusion = "Conclusion: [Not Explicitly Stated]";
             }
@@ -44,24 +44,24 @@
         }
 
         function convertToLogicalForm(standardForm) {
-            let logicalForm = standardForm.replace(/if /gi, "P → ")
-                                         .replace(/then /gi, "Q")
-                                         .replace(/or /gi, " ∨ ")
-                                         .replace(/not /gi, "¬");
-            return logicalForm;
+            return standardForm.replace(/if /gi, "P → ")
+                               .replace(/then /gi, "Q")
+                               .replace(/or /gi, " ∨ ")
+                               .replace(/not /gi, "¬")
+                               .replace(/therefore/gi, "∴");
         }
 
         function checkValidity(logicalForm) {
-            if (logicalForm.includes("P → Q") && logicalForm.includes("P") && logicalForm.includes("∴ Q")) {
+            if (/P → Q.*P.*∴ Q/.test(logicalForm)) {
                 return "✓ This argument follows Modus Ponens and is valid.";
             }
-            if (logicalForm.includes("P → Q") && logicalForm.includes("¬Q") && logicalForm.includes("∴ ¬P")) {
+            if (/P → Q.*¬Q.*∴ ¬P/.test(logicalForm)) {
                 return "✓ This argument follows Modus Tollens and is valid.";
             }
-            if (logicalForm.includes("P → Q") && logicalForm.includes("Q → R") && logicalForm.includes("∴ P → R")) {
+            if (/P → Q.*Q → R.*∴ P → R/.test(logicalForm)) {
                 return "✓ This argument follows Hypothetical Syllogism and is valid.";
             }
-            if (logicalForm.includes("P ∨ Q") && logicalForm.includes("¬P") && logicalForm.includes("∴ Q")) {
+            if (/P ∨ Q.*¬P.*∴ Q/.test(logicalForm)) {
                 return "✓ This argument follows Disjunctive Syllogism and is valid.";
             }
             return "X This argument is invalid. The conclusion does not logically follow from the premises.";
@@ -69,13 +69,13 @@
 
         function detectFallacies(logicalForm) {
             const fallacies = [];
-            if (logicalForm.includes("P → Q") && logicalForm.includes("Q") && logicalForm.includes("∴ P")) {
+            if (/P → Q.*Q.*∴ P/.test(logicalForm)) {
                 fallacies.push("Affirming the Consequent");
             }
-            if (logicalForm.includes("P → Q") && logicalForm.includes("¬P") && logicalForm.includes("∴ ¬Q")) {
+            if (/P → Q.*¬P.*∴ ¬Q/.test(logicalForm)) {
                 fallacies.push("Denying the Antecedent");
             }
-            if (logicalForm.includes("All A are C") && logicalForm.includes("All B are C") && logicalForm.includes("∴ All A are B")) {
+            if (/All A are C.*All B are C.*∴ All A are B/.test(logicalForm)) {
                 fallacies.push("Undistributed Middle");
             }
             return fallacies;
