@@ -53,6 +53,10 @@
                 return "✓ This argument follows Modus Tollens and is valid.";
             }
 
+            if (lowerForm.includes("if") && lowerForm.includes("then")) {
+                return "✓ This argument appears to be deductively valid.";
+            }
+            
             return "X This argument is invalid. The conclusion does not logically follow from the premises.";
         }
 
@@ -122,3 +126,4 @@
     </script>
 </body>
 </html>
+
