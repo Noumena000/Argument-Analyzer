@@ -46,7 +46,7 @@
             });
 
             if (!conclusion && premises.length > 1) {
-                conclusion = "Conclusion: " + premises.pop();
+                conclusion = "Conclusion: " + premises.pop().replace(/^P\d+:\s*/, '');
             } else if (!conclusion) {
                 conclusion = "Conclusion: [Not Explicitly Stated]";
             }
