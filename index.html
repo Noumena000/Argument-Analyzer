@@ -3,121 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Argument Standardizer</title>
+    <title>AI Argument Analyzer (No Backend)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> <!-- Load TensorFlow.js -->
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f8f9fa;
-            padding: 20px;
-            color: #343a40;
-        }
-        h1 {
-            color: #343a40;
-        }
-        textarea {
-            width: 80%;
-            height: 150px;
-            margin-bottom: 10px;
-        }
-        .btn {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        .output {
-            margin-top: 20px;
-            font-size: 18px;
-            text-align: left;
-            width: 60%;
-            margin-left: auto;
-            margin-right: auto;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #output { margin-top: 20px; padding: 10px; background: #f4f4f4; }
     </style>
 </head>
 <body>
-
-    <h1>AI Argument Standardizer</h1>
-    <p>Enter an argument below, and the tool will separate **premises** and **conclusions**.</p>
-
-    <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea><br>
-    <button class="btn" onclick="standardizeArgument()">Standardize</button>
-
-    <div id="response" class="output"></div>
+    <h1>Argument Analyzer (AI-powered)</h1>
+    <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea>
+    <button onclick="analyzeArgument()">Analyze</button>
+    <div id="output"></div>
 
     <script>
-        function standardizeArgument() {
-            const argument = document.getElementById("argumentInput").value.trim();
-            if (!argument) {
-                alert("Please enter an argument.");
-                return;
-            }
+        async function analyzeArgument() {
+            const argument = document.getElementById('argumentInput').value.toLowerCase();
+            document.getElementById('output').innerText = "Analyzing...";
 
-            // Expanded list of conclusion indicators
-            const conclusionIndicators = [
-                "therefore", "thus", "hence", "so", "consequently",
-                "it follows that", "we can conclude that", "which means that",
-                "this implies that", "ergo", "accordingly", "as a result"
-            ];
+            // Convert text to numerical format (basic text embedding)
+            const inputTensor = tf.tensor1d(argument.split(' ').map(word => word.length));
 
-            // Improved sentence splitting to avoid breaking logical statements
-            let sentences = argument.split(/(?<=\.)\s+|\s*(?<=;)\s*/);
-            let premises = [];
-            let conclusion = "";
-
-            for (let sentence of sentences) {
-                let lowerSentence = sentence.toLowerCase().trim();
-
-                // Ensure full conclusion detection, even if it's broken into multiple parts
-                if (conclusionIndicators.some(word => lowerSentence.includes(word))) {
-                    conclusion = sentence;
-
-                    // If there's another sentence after this, add it to the conclusion
-                    let index = sentences.indexOf(sentence);
-                    if (index + 1 < sentences.length) {
-                        conclusion += " " + sentences[index + 1];
-                        sentences.splice(index + 1, 1); // Remove from premises
-                    }
-                } else {
-                    premises.push(sentence);
-                }
-            }
-
-            // Ensure all premises are correctly captured
-            if (premises.length === 0 && conclusion) {
-                premises.push(conclusion);
-                conclusion = "";
-            }
-
-            // If no conclusion is explicitly detected, allow the last premise to be the conclusion
-            if (!conclusion && premises.length > 1) {
-                conclusion = premises.pop();
-            }
-
-            // Format the output
-            let output = "<strong>Standard Form:</strong><br><br>";
-
-            premises.forEach((premise, index) => {
-                output += `(P${index + 1}) ${premise}<br>`;
+            // Simple AI model (Dummy ML - replace with trained model later)
+            const model = await tf.sequential({
+                layers: [
+                    tf.layers.dense({ inputShape: [inputTensor.shape[0]], units: 5, activation: 'relu' }),
+                    tf.layers.dense({ units: 3, activation: 'softmax' })
+                ]
             });
 
-            if (conclusion) {
-                output += `<br>(C) ${conclusion}`;
+            // Predict argument type (simplified for now)
+            const prediction = model.predict(inputTensor.reshape([1, inputTensor.shape[0]]));
+
+            // Example classification output (dummy values)
+            const result = await prediction.data();
+            let analysis = "Analysis: ";
+
+            if (result[0] > 0.5) {
+                analysis += "This argument seems to use deductive reasoning.";
+            } else if (result[1] > 0.5) {
+                analysis += "This argument seems to use inductive reasoning.";
             } else {
-                output += "<br><strong>No conclusion detected.</strong>";
+                analysis += "Argument structure unclear.";
             }
 
-            document.getElementById("response").innerHTML = output;
+            document.getElementById('output').innerText = analysis;
         }
     </script>
-
 </body>
 </html>
