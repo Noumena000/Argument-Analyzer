@@ -112,18 +112,26 @@
         }
 
         async function analyzeArgument() {
-            const argument = document.getElementById('argumentInput').value;
-            document.getElementById('output').innerText = "Analyzing with AI...";
-            
-            let { premises, conclusion } = extractStandardForm(argument);
-            let argumentType = classifyArgumentType(argument);
-            let strength = evaluateStrength(argument);
-            const aiResult = await analyzeArgumentWithAI(argument);
-            
-            document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
-                `Type: ${argumentType}\n` +
-                `Strength: ${strength}\n` +
-                `Analysis: ${aiResult}`;
+    const argument = document.getElementById('argumentInput').value;
+    document.getElementById('output').innerText = "Analyzing with AI...";
+
+    let { premises, conclusion } = extractStandardForm(argument);
+    let argumentType = classifyArgumentType(argument);
+    let strength = evaluateStrength(argument);
+    const aiResult = await analyzeArgumentWithAI(argument);
+
+    let validityAnalysis = "";
+    if (argumentType === "Deductive") {
+        validityAnalysis = aiResult.includes("valid") ? "✓ This argument is valid." : "X This argument is invalid.";
+        strength = "N/A (Deductive arguments are not evaluated for strength).";
+    } else {
+        validityAnalysis = strength; // Only display strength for inductive arguments
+    }
+
+    document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
+        `Type: ${argumentType}\n` +
+        `Analysis: ${validityAnalysis}`;
+}
         }
     </script>
 </body>
