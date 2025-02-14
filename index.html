@@ -81,21 +81,21 @@
             let lowerPremises = premises.map(p => p.toLowerCase());
             let lowerConclusions = conclusions.map(c => c.toLowerCase());
 
-            // Check for Modus Ponens (If P then Q, P, therefore Q)
+            // **Check for Modus Ponens (If P then Q, P, therefore Q)**
             let modusPonens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
                               lowerPremises.some(p => lowerConclusions.some(c => c.includes(p.split("then ")[1])));
 
-            // Check for Modus Tollens (If P then Q, Not Q, therefore Not P)
+            // **Check for Modus Tollens (If P then Q, Not Q, therefore Not P)**
             let modusTollens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
-                               lowerPremises.some(p => p.includes("not") && lowerConclusions.some(c => c.includes("not")));
+                               lowerPremises.some(p => lowerConclusions.some(c => c.includes("not") && p.includes("then")));
 
-            // Check for Hypothetical Syllogism (If P then Q, If Q then R, therefore If P then R)
+            // **Check for Hypothetical Syllogism (If P then Q, If Q then R, therefore If P then R)**
             let hypotheticalSyllogism = lowerPremises.length >= 2 &&
                                         lowerPremises[0].includes("if") && lowerPremises[0].includes("then") &&
                                         lowerPremises[1].includes("if") && lowerPremises[1].includes("then") &&
                                         lowerConclusions.some(c => c.includes("if") && c.includes("then"));
 
-            // Check for Denying the Antecedent (Invalid Argument: If P then Q, Not P, therefore Not Q)
+            // **Check for Denying the Antecedent (Invalid Form)**
             let denyingAntecedent = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
                                     lowerPremises.some(p => p.includes("not") && lowerConclusions.some(c => !c.includes("if") && !c.includes("then")));
 
