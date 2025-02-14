@@ -1,41 +1,153 @@
-function checkValidity(standardForm) {
-    const lowerForm = standardForm.toLowerCase();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Argument Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://unpkg.com/compromise"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #output { margin-top: 20px; padding: 10px; background: #f4f4f4; white-space: pre-line; }
+    </style>
+</head>
+<body>
+    <h1>AI Argument Analyzer</h1>
+    <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea>
+    <button onclick="analyzeArgument()">Analyze</button>
+    <div id="output"></div>
 
-    // Detect Modus Ponens (MP)
-    if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
-        const premise1 = standardForm.match(/p1: if (.*?), then (.*)/i);
-        const premise2 = standardForm.match(/p2: (.*?)/i);
-        const conclusion = standardForm.match(/conclusion: (.*?)/i);
+    <script>
+        function extractStandardForm(argument) {
+            const doc = nlp(argument);
+            const sentences = doc.sentences().out('array');
+            let premises = [];
+            let conclusion = "";
 
-        if (premise1 && premise2 && conclusion) {
-            const ifClause = premise1[1].trim();
-            const thenClause = premise1[2].trim();
+            sentences.forEach((sentence, index) => {
+                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                    conclusion = "Conclusion: " + sentence;
+                } else {
+                    premises.push(`P${index + 1}: ${sentence}`);
+                }
+            });
 
-            if (premise2[1].trim() === ifClause && conclusion[1].trim() === thenClause) {
-                return "✓ This argument follows Modus Ponens and is valid.";
+            if (!conclusion && premises.length > 1) {
+                conclusion = "Conclusion: " + premises.pop();
+            } else if (!conclusion) {
+                conclusion = "Conclusion: [Not Explicitly Stated]";
             }
+
+            return { premises, conclusion };
         }
-    }
 
-    // Detect Modus Tollens (MT)
-    if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
-        return "✓ This argument follows Modus Tollens and is valid.";
-    }
+        function checkValidity(standardForm) {
+            const lowerForm = standardForm.toLowerCase();
 
-    // Detect Hypothetical Syllogism (HS)
-    if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.match(/if (.*?), then (.*)/g).length === 2) {
-        return "✓ This argument follows Hypothetical Syllogism and is valid.";
-    }
+            // Detect Modus Ponens (MP)
+            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
+                const premise1 = standardForm.match(/p1: if (.*?), then (.*)/i);
+                const premise2 = standardForm.match(/p2: (.*?)/i);
+                const conclusion = standardForm.match(/conclusion: (.*?)/i);
 
-    // Detect Disjunctive Syllogism (DS)
-    if (lowerForm.includes("either") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
-        return "✓ This argument follows Disjunctive Syllogism and is valid.";
-    }
+                if (premise1 && premise2 && conclusion) {
+                    const ifClause = premise1[1]?.trim() || "";
+                    const thenClause = premise1[2]?.trim() || "";
 
-    // Detect Constructive Dilemma
-    if (lowerForm.includes("either") && lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
-        return "✓ This argument follows Constructive Dilemma and is valid.";
-    }
+                    if (premise2[1]?.trim() === ifClause && conclusion[1]?.trim() === thenClause) {
+                        return "✓ This argument follows Modus Ponens and is valid.";
+                    }
+                }
+            }
 
-    return "X This argument is invalid. The conclusion does not logically follow from the premises.";
-}
+            // Detect Modus Tollens (MT)
+            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
+                return "✓ This argument follows Modus Tollens and is valid.";
+            }
+
+            // Detect Hypothetical Syllogism (HS)
+            if (lowerForm.includes("if") && lowerForm.includes("then") && (lowerForm.match(/if (.*?), then (.*)/g) || []).length === 2) {
+                return "✓ This argument follows Hypothetical Syllogism and is valid.";
+            }
+
+            // Detect Disjunctive Syllogism (DS)
+            if (lowerForm.includes("either") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
+                return "✓ This argument follows Disjunctive Syllogism and is valid.";
+            }
+
+            // Detect Constructive Dilemma
+            if (lowerForm.includes("either") && lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
+                return "✓ This argument follows Constructive Dilemma and is valid.";
+            }
+
+            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
+        }
+
+        function evaluateStrength(standardForm) {
+            const lowerForm = standardForm.toLowerCase();
+            if (lowerForm.includes("if") && lowerForm.includes("then")) {
+                return "N/A (Deductive arguments are not evaluated for strength).";
+            }
+            if (lowerForm.includes("most likely") || lowerForm.includes("probably") || lowerForm.includes("statistical data")) {
+                return "✓ This argument is strong.";
+            }
+            return "X This argument is weak.";
+        }
+
+        function identifyAssumptions(standardForm) {
+            return ["The argument might require an additional premise to logically support the conclusion."];
+        }
+
+        function detectFallacies(standardForm) {
+            const fallacies = [];
+            if (standardForm.includes("everyone knows")) {
+                fallacies.push("Appeal to Popularity");
+            }
+            if (standardForm.includes("never") || standardForm.includes("always")) {
+                fallacies.push("Hasty Generalization");
+            }
+            if (standardForm.includes("since X happened before Y, Y must be caused by X")) {
+                fallacies.push("False Cause");
+            }
+            if (standardForm.includes("attacks the character instead of the argument")) {
+                fallacies.push("Ad Hominem");
+            }
+            if (standardForm.includes("presents only two choices when more exist")) {
+                fallacies.push("False Dilemma");
+            }
+            if (standardForm.includes("assumes extreme outcomes from minor changes")) {
+                fallacies.push("Slippery Slope");
+            }
+            if (standardForm.includes("the conclusion repeats the premise")) {
+                fallacies.push("Circular Reasoning");
+            }
+            if (standardForm.includes("misrepresenting the opponent’s argument")) {
+                fallacies.push("Straw Man Fallacy");
+            }
+            return fallacies;
+        }
+
+        function analyzeArgument() {
+            const argument = document.getElementById('argumentInput').value.toLowerCase();
+            document.getElementById('output').innerText = "Analyzing...";
+
+            let { premises, conclusion } = extractStandardForm(argument);
+            let analysis = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
+
+            let validity = checkValidity(analysis);
+            let strength = evaluateStrength(analysis);
+            let assumptions = identifyAssumptions(analysis);
+            let fallacies = detectFallacies(analysis);
+
+            analysis += `Validity: ${validity}\n`;
+            analysis += `Strength (if inductive): ${strength}\n`;
+            analysis += `Assumptions: ${assumptions.join(", ")}\n`;
+            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}`;
+
+            document.getElementById('output').innerText = analysis;
+        }
+    </script>
+</body>
+</html>
