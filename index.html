@@ -68,16 +68,24 @@
                 "this implies that", "ergo", "accordingly", "as a result"
             ];
 
-            // Split sentences properly (supports commas, semicolons, periods)
-            let sentences = argument.split(/(?<=[.?!;])\s+/);
+            // Improved sentence splitting to avoid breaking logical statements
+            let sentences = argument.split(/(?<=\.)\s+|\s*(?<=;)\s*/);
             let premises = [];
             let conclusion = "";
 
             for (let sentence of sentences) {
                 let lowerSentence = sentence.toLowerCase().trim();
-                
+
+                // Ensure full conclusion detection, even if it's broken into multiple parts
                 if (conclusionIndicators.some(word => lowerSentence.includes(word))) {
-                    conclusion = sentence; // Store detected conclusion
+                    conclusion = sentence;
+
+                    // If there's another sentence after this, add it to the conclusion
+                    let index = sentences.indexOf(sentence);
+                    if (index + 1 < sentences.length) {
+                        conclusion += " " + sentences[index + 1];
+                        sentences.splice(index + 1, 1); // Remove from premises
+                    }
                 } else {
                     premises.push(sentence);
                 }
@@ -96,7 +104,7 @@
 
             // Format the output
             let output = "<strong>Standard Form:</strong><br><br>";
-            
+
             premises.forEach((premise, index) => {
                 output += `(P${index + 1}) ${premise}<br>`;
             });
