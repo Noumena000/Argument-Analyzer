@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Argument Analyzer (No Backend)</title>
+    <title>AI Argument Analyzer</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> <!-- Load TensorFlow.js -->
+    <script src="https://unpkg.com/compromise"></script> <!-- Load Compromise.js for NLP -->
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
         textarea { width: 100%; height: 100px; margin-bottom: 10px; }
@@ -13,40 +14,86 @@
     </style>
 </head>
 <body>
-    <h1>Argument Analyzer (AI-powered)</h1>
+    <h1>AI Argument Analyzer</h1>
     <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea>
     <button onclick="analyzeArgument()">Analyze</button>
     <div id="output"></div>
 
     <script>
+        function extractStandardForm(argument) {
+            const doc = nlp(argument);
+            const sentences = doc.sentences().out('array');
+
+            let premises = [];
+            let conclusion = "";
+
+            sentences.forEach((sentence, index) => {
+                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                    conclusion = sentence;
+                } else {
+                    premises.push(`P${index + 1}: ${sentence}`);
+                }
+            });
+
+            if (!conclusion && premises.length > 1) {
+                conclusion = `Conclusion: ${premises.pop()}`;
+            } else if (!conclusion) {
+                conclusion = "Conclusion: [Not Explicitly Stated]";
+            }
+
+            return {
+                premises,
+                conclusion
+            };
+        }
+
         async function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value.toLowerCase();
             document.getElementById('output').innerText = "Analyzing...";
 
-            // Convert text to numerical format (basic text embedding)
-            const inputTensor = tf.tensor1d(argument.split(' ').map(word => word.length));
+            let { premises, conclusion } = extractStandardForm(argument);
 
-            // Simple AI model (Dummy ML - replace with trained model later)
-            const model = await tf.sequential({
-                layers: [
-                    tf.layers.dense({ inputShape: [inputTensor.shape[0]], units: 5, activation: 'relu' }),
-                    tf.layers.dense({ units: 3, activation: 'softmax' })
-                ]
-            });
+            let analysis = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
 
-            // Predict argument type (simplified for now)
-            const prediction = model.predict(inputTensor.reshape([1, inputTensor.shape[0]]));
+            // Step 1: Identify Argument Type
+            let isDeductive = argument.includes("therefore") || argument.includes("it must be the case that");
+            let isInductive = argument.includes("probably") || argument.includes("most likely") || argument.includes("it is likely that");
 
-            // Example classification output (dummy values)
-            const result = await prediction.data();
-            let analysis = "Analysis: ";
+            if (isDeductive) {
+                analysis += "This is a **deductive** argument. ";
 
-            if (result[0] > 0.5) {
-                analysis += "This argument seems to use deductive reasoning.";
-            } else if (result[1] > 0.5) {
-                analysis += "This argument seems to use inductive reasoning.";
-            } else {
+                // Step 2: Check Validity (For Deductive Arguments)
+                if (argument.includes("if") && argument.includes("then") && argument.includes("therefore")) {
+                    analysis += " This follows **Modus Ponens** and is **valid**.";
+                } else if (argument.includes("if") && argument.includes("then") && argument.includes("not")) {
+                    analysis += " This might follow **Modus Tollens** and be **valid**.";
+                } else {
+                    analysis += " However, the reasoning seems **invalid**.";
+                }
+            } 
+            else if (isInductive) {
+                analysis += "This is an **inductive** argument. ";
+
+                // Step 3: Check Strength (For Inductive Arguments)
+                if (argument.includes("most") || argument.includes("many") || argument.includes("often")) {
+                    analysis += " The argument appears **strong**.";
+                } else {
+                    analysis += " The argument appears **weak**.";
+                }
+            } 
+            else {
                 analysis += "Argument structure unclear.";
+            }
+
+            // Step 4: Detect Logical Fallacies
+            if (argument.includes("everyone knows") || argument.includes("it is common knowledge")) {
+                analysis += " Possible **Appeal to Popularity** fallacy.";
+            }
+            if (argument.includes("always") || argument.includes("never")) {
+                analysis += " Possible **Hasty Generalization** fallacy.";
+            }
+            if (argument.includes("since x happened before y, y must be caused by x")) {
+                analysis += " Possible **False Cause** fallacy.";
             }
 
             document.getElementById('output').innerText = analysis;
