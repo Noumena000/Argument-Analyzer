@@ -31,17 +31,46 @@
             return vector;
         }
 
-        const trainingData = [
-            { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
-            { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
-            { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
-            { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
-        ];
+        function extractStandardForm(argument) {
+            const doc = nlp(argument);
+            const sentences = doc.sentences().out('array');
+            let premises = [];
+            let conclusion = "";
 
-        const vectorizedData = trainingData.map(d => ({
-            input: textToVector(d.input),
-            output: d.output
-        }));
+            sentences.forEach((sentence, index) => {
+                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                    conclusion = "Conclusion: " + sentence;
+                } else {
+                    premises.push(`P${index + 1}: ${sentence}`);
+                }
+            });
+
+            if (!conclusion && premises.length > 1) {
+                conclusion = "Conclusion: " + premises.pop();
+            } else if (!conclusion) {
+                conclusion = "Conclusion: [Not Explicitly Stated]";
+            }
+
+            return { premises, conclusion };
+        }
+
+        function classifyArgumentType(argument) {
+            if (argument.includes("if") && argument.includes("then")) {
+                return "Deductive";
+            } else {
+                return "Inductive";
+            }
+        }
+
+        function evaluateStrength(argument) {
+            if (classifyArgumentType(argument) === "Deductive") {
+                return "N/A (Deductive arguments are not evaluated for strength).";
+            }
+            if (argument.includes("most likely") || argument.includes("probably") || argument.includes("statistical data")) {
+                return "✓ This argument is strong.";
+            }
+            return "X This argument is weak.";
+        }
 
         async function trainModel() {
             const model = tf.sequential();
@@ -54,6 +83,18 @@
                 loss: 'categoricalCrossentropy',
                 metrics: ['accuracy']
             });
+
+            const trainingData = [
+                { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
+                { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
+                { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
+                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
+            ];
+
+            const vectorizedData = trainingData.map(d => ({
+                input: textToVector(d.input),
+                output: d.output
+            }));
 
             const xs = tf.tensor2d(vectorizedData.map(d => d.input));
             const ys = tf.tensor2d(vectorizedData.map(d => d.output));
@@ -73,8 +114,16 @@
         async function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value;
             document.getElementById('output').innerText = "Analyzing with AI...";
+            
+            let { premises, conclusion } = extractStandardForm(argument);
+            let argumentType = classifyArgumentType(argument);
+            let strength = evaluateStrength(argument);
             const aiResult = await analyzeArgumentWithAI(argument);
-            document.getElementById('output').innerText = aiResult;
+            
+            document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
+                `Type: ${argumentType}\n` +
+                `Strength: ${strength}\n` +
+                `Analysis: ${aiResult}`;
         }
     </script>
 </body>
