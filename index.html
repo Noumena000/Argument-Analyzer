@@ -22,12 +22,13 @@
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
         .fallacy { color: orange; font-weight: bold; }
+        .info { font-size: 14px; color: #555; }
     </style>
 </head>
 <body>
 
     <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will format it into standard form and determine if it is logically valid.</p>
+    <p>Enter an argument below, and the tool will format it into standard form, check for validity, and detect fallacies.</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
     <button onclick="clearInput()">Clear</button>
