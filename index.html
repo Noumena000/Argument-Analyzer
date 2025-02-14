@@ -10,7 +10,7 @@
         body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
         textarea { width: 100%; height: 100px; margin-bottom: 10px; }
         button { padding: 10px 20px; font-size: 16px; }
-        #output { margin-top: 20px; padding: 10px; background: #f4f4f4; }
+        #output { margin-top: 20px; padding: 10px; background: #f4f4f4; white-space: pre-line; }
     </style>
 </head>
 <body>
@@ -23,7 +23,6 @@
         function extractStandardForm(argument) {
             const doc = nlp(argument);
             const sentences = doc.sentences().out('array');
-
             let premises = [];
             let conclusion = "";
 
@@ -45,14 +44,24 @@
         }
 
         function checkValidity(standardForm) {
-            if (standardForm.includes("If") && standardForm.includes("then")) {
-                return "✓ This argument appears valid.";
+            const lowerForm = standardForm.toLowerCase();
+
+            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
+                return "✓ This argument follows Modus Ponens and is valid.";
             }
+            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
+                return "✓ This argument follows Modus Tollens and is valid.";
+            }
+
             return "X This argument is invalid. The conclusion does not logically follow from the premises.";
         }
 
         function evaluateStrength(standardForm) {
-            if (standardForm.includes("most likely") || standardForm.includes("probably")) {
+            const lowerForm = standardForm.toLowerCase();
+            if (lowerForm.includes("if") && lowerForm.includes("then")) {
+                return "N/A (Deductive arguments are not evaluated for strength).";
+            }
+            if (lowerForm.includes("most likely") || lowerForm.includes("probably") || lowerForm.includes("statistical data")) {
                 return "✓ This argument is strong.";
             }
             return "X This argument is weak.";
