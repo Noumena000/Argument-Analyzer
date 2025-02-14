@@ -11,15 +11,12 @@
         #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
-        .fallacy { color: orange; font-weight: bold; }
-        .strong { color: blue; font-weight: bold; }
-        .weak { color: purple; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will analyze whether it's **deductive (valid/invalid)** or **inductive (strong/weak).**</p>
+    <p>Enter an argument below, and the tool will format it into standard form and determine if it is logically valid.</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
 
@@ -58,87 +55,26 @@
             premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
             outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
 
-            let argumentType = determineArgumentType(premises, conclusion);
-            outputHTML += argumentType;
-
-            let fallacies = detectFallacies(premises, conclusion);
-            if (fallacies.length > 0) {
-                outputHTML += "<h3>Potential Fallacies Detected:</h3>";
-                fallacies.forEach(f => outputHTML += `<p class='fallacy'>⚠️ ${f}</p>`);
-            } else {
-                outputHTML += "<p class='valid'>✅ No major logical fallacies detected.</p>";
-            }
-
-            outputHTML += "<p><strong>Note:</strong> Soundness of a valid argument depends on the truth of each premise.</p>";
+            let isValid = checkValidity(premises, conclusion);
+            outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid.</p>`;
 
             document.getElementById("output").innerHTML = outputHTML;
         }
 
-        function determineArgumentType(premises, conclusion) {
-            if (premises.length < 2 || !conclusion) return "<p class='invalid'>❌ Insufficient premises to determine validity.</p>";
+        function checkValidity(premises, conclusion) {
+            if (premises.length < 2 || !conclusion) return false;
 
-            // **Check for Deductive Argument Patterns**
-            let modusPonens = premises.some(p => p.toLowerCase().includes("if") && p.toLowerCase().includes("then"))
-                               && premises.some(p => conclusion.toLowerCase().includes(p.split("then ")[1]));
-
-            let modusTollens = premises.some(p => p.toLowerCase().includes("if") && p.toLowerCase().includes("then"))
-                               && premises.some(p => p.toLowerCase().includes("not") && conclusion.toLowerCase().includes("not"));
-
-            let hypotheticalSyllogism = premises.length === 3 &&
-                                        premises[0].toLowerCase().includes("if") && premises[0].toLowerCase().includes("then") &&
-                                        premises[1].toLowerCase().includes("if") && premises[1].toLowerCase().includes("then") &&
-                                        conclusion.toLowerCase().includes("if") && conclusion.toLowerCase().includes("then");
-
-            if (modusPonens || modusTollens || hypotheticalSyllogism) {
-                return "<p class='valid'>✔ Deductive argument: Logically valid.</p>";
-            }
-
-            // **Check for Inductive Argument Strength**
             let premiseWords = premises.map(p => p.toLowerCase().split(" "));
             let conclusionWords = conclusion.toLowerCase().split(" ");
-            let matches = 0;
 
+            let matches = 0;
             for (let word of conclusionWords) {
                 if (premiseWords.some(premise => premise.includes(word))) {
                     matches++;
                 }
             }
 
-            let matchPercentage = matches / conclusionWords.length;
-
-            if (matchPercentage > 0.75) {
-                return "<p class='valid'>✔ Deductive argument: Logically valid.</p>";
-            } else if (matchPercentage > 0.4) {
-                return "<p class='strong'>✔ Inductive argument: Strong reasoning.</p>";
-            } else {
-                return "<p class='weak'>❌ Inductive argument: Weak reasoning.</p>";
-            }
-        }
-
-        function detectFallacies(premises, conclusion) {
-            let fallacies = [];
-
-            if (premises.length === 1 && conclusion) {
-                fallacies.push("Hasty Generalization: The argument may be jumping to a conclusion too quickly.");
-            }
-
-            if (premises.some(p => p.toLowerCase().includes(conclusion.toLowerCase()))) {
-                fallacies.push("Circular Reasoning: The conclusion is assumed within the premises.");
-            }
-
-            if (conclusion.toLowerCase().includes("either") && conclusion.toLowerCase().includes("or")) {
-                fallacies.push("False Dichotomy: The argument presents two options as if they are the only possibilities.");
-            }
-
-            if (premises.some(p => p.toLowerCase().includes("not been proven"))) {
-                fallacies.push("Appeal to Ignorance: The argument assumes something is true because it hasn't been proven false.");
-            }
-
-            if (premises.some(p => p.toLowerCase().includes("must") && !p.includes("evidence"))) {
-                fallacies.push("Begging the Question: The argument assumes what it is trying to prove.");
-            }
-
-            return fallacies;
+            return matches / conclusionWords.length > 0.5; // At least 50% word overlap with premises
         }
     </script>
 
