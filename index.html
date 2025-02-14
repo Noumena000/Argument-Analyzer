@@ -21,6 +21,7 @@
         }
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
+        .fallacy { color: orange; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -72,6 +73,9 @@
             let validityResult = checkValidity(premises, conclusions);
             outputHTML += validityResult;
 
+            let fallacyResult = detectFallacies(premises, conclusions);
+            outputHTML += fallacyResult;
+
             document.getElementById("output").innerHTML = outputHTML;
         }
 
@@ -81,33 +85,44 @@
             let lowerPremises = premises.map(p => p.toLowerCase());
             let lowerConclusions = conclusions.map(c => c.toLowerCase());
 
-            // **Check for Modus Ponens (If P then Q, P, therefore Q)**
             let modusPonens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
                               lowerPremises.some(p => lowerConclusions.some(c => c.includes(p.split("then ")[1])));
 
-            // **Check for Modus Tollens (If P then Q, Not Q, therefore Not P)**
             let modusTollens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
                                lowerPremises.some(p => lowerConclusions.some(c => c.includes("not") && p.includes("then")));
 
-            // **Check for Hypothetical Syllogism (If P then Q, If Q then R, therefore If P then R)**
             let hypotheticalSyllogism = lowerPremises.length >= 2 &&
                                         lowerPremises[0].includes("if") && lowerPremises[0].includes("then") &&
                                         lowerPremises[1].includes("if") && lowerPremises[1].includes("then") &&
                                         lowerConclusions.some(c => c.includes("if") && c.includes("then"));
-
-            // **Check for Denying the Antecedent (Invalid Form)**
-            let denyingAntecedent = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
-                                    lowerPremises.some(p => p.includes("not") && lowerConclusions.some(c => !c.includes("if") && !c.includes("then")));
-
-            if (denyingAntecedent) {
-                return "<p class='invalid'>✖ This argument is invalid.</p><p><strong>Why?</strong> This is an example of 'Denying the Antecedent,' which is not a valid logical form.</p>";
-            }
 
             if (modusPonens || modusTollens || hypotheticalSyllogism) {
                 return "<p class='valid'>✔ This argument is logically valid.</p>";
             }
 
             return "<p class='invalid'>✖ This argument is invalid.</p><p><strong>Why?</strong> The conclusion does not logically follow from the premises. Check for missing premises or faulty reasoning.</p>";
+        }
+
+        function detectFallacies(premises, conclusions) {
+            let fallacies = [];
+
+            if (premises.length === 1 && conclusions.length > 0) {
+                fallacies.push("⚠️ Hasty Generalization: The argument is jumping to a conclusion too quickly.");
+            }
+
+            if (premises.some(p => p.toLowerCase().includes("correlation") || p.toLowerCase().includes("cause"))) {
+                fallacies.push("⚠️ False Cause: Correlation does not imply causation.");
+            }
+
+            if (premises.some(p => p.toLowerCase().includes("must be true") || p.toLowerCase().includes("no evidence against"))) {
+                fallacies.push("⚠️ Appeal to Ignorance: Assuming something is true because it hasn’t been proven false.");
+            }
+
+            if (fallacies.length > 0) {
+                return "<h3>Potential Fallacies Detected:</h3>" + fallacies.map(f => `<p class='fallacy'>${f}</p>`).join("");
+            }
+
+            return "<p class='valid'>✅ No major logical fallacies detected.</p>";
         }
 
         function clearInput() {
