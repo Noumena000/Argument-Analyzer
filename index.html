@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Argument Analyzer</title>
+    <title>AI-Powered Argument Analyzer</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
         textarea { width: 90%; height: 100px; margin-bottom: 10px; padding: 10px; font-size: 16px; }
@@ -22,13 +22,12 @@
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
         .fallacy { color: orange; font-weight: bold; }
-        .info { font-size: 14px; color: #555; }
     </style>
 </head>
 <body>
 
-    <h2>AI Argument Analyzer</h2>
-    <p>Enter an argument below, and the tool will format it into standard form, check for validity, and detect fallacies.</p>
+    <h2>AI-Powered Argument Analyzer</h2>
+    <p>Enter an argument below, and the AI will analyze its structure, check validity, and detect fallacies.</p>
     <textarea id="argumentInput" placeholder="Type your argument here..." rows="5"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
     <button onclick="clearInput()">Clear</button>
@@ -36,94 +35,32 @@
     <div id="output"></div>
 
     <script>
-        function analyzeArgument() {
-            let text = document.getElementById("argumentInput").value.trim();
-            let premises = [];
-            let conclusions = [];
-
-            const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
-            let sentences = text.match(/(?:if\s[^.!?]+then\s[^.!?]+|[^.!?]+[.!?]+)/gi) || [];
-
-            if (sentences.length === 0) {
-                document.getElementById("output").innerHTML = "<p class='invalid'>❌ No argument detected. Please enter a valid argument.</p>";
+        async function analyzeArgument() {
+            let argumentText = document.getElementById("argumentInput").value.trim();
+            if (!argumentText) {
+                document.getElementById("output").innerHTML = "<p class='invalid'>❌ Please enter an argument for analysis.</p>";
                 return;
             }
 
-            for (let sentence of sentences) {
-                sentence = sentence.trim();
-                let lowerSentence = sentence.toLowerCase();
+            document.getElementById("output").innerHTML = "⏳ Analyzing argument... Please wait.";
 
-                if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
-                    conclusions.push(sentence);
-                } else {
-                    premises.push(sentence);
-                }
+            let response = await fetch("https://api-inference.huggingface.co/models/google/logic-t5-base", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer hf_xxxxxxxxxxxxxxxxxxx",  // REPLACE with your actual API key!
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ "inputs": argumentText })
+            });
+
+            let data = await response.json();
+
+            if (data.error) {
+                document.getElementById("output").innerHTML = `<p class='invalid'>❌ Error: ${data.error}</p>`;
+                return;
             }
 
-            if (premises.length >= 2 && conclusions.length === 0) {
-                conclusions.push(premises.pop());
-            }
-
-            let outputHTML = "<h3>Standard Form:</h3>";
-            premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
-            conclusions.forEach((c, i) => outputHTML += `<p><strong>Conclusion ${i+1}:</strong> ${c}</p>`);
-            if (conclusions.length === 0) {
-                outputHTML += `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
-            }
-
-            let validityResult = checkValidity(premises, conclusions);
-            outputHTML += validityResult;
-
-            let fallacyResult = detectFallacies(premises, conclusions);
-            outputHTML += fallacyResult;
-
-            document.getElementById("output").innerHTML = outputHTML;
-        }
-
-        function checkValidity(premises, conclusions) {
-            if (premises.length < 2 || conclusions.length === 0) return "<p class='invalid'>❌ Insufficient premises to determine validity.</p>";
-
-            let lowerPremises = premises.map(p => p.toLowerCase());
-            let lowerConclusions = conclusions.map(c => c.toLowerCase());
-
-            let modusPonens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
-                              lowerPremises.some(p => lowerConclusions.some(c => c.includes(p.split("then ")[1])));
-
-            let modusTollens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
-                               lowerPremises.some(p => lowerConclusions.some(c => c.includes("not") && p.includes("then")));
-
-            let hypotheticalSyllogism = lowerPremises.length >= 2 &&
-                                        lowerPremises[0].includes("if") && lowerPremises[0].includes("then") &&
-                                        lowerPremises[1].includes("if") && lowerPremises[1].includes("then") &&
-                                        lowerConclusions.some(c => c.includes("if") && c.includes("then"));
-
-            if (modusPonens || modusTollens || hypotheticalSyllogism) {
-                return "<p class='valid'>✔ This argument is logically valid.</p>";
-            }
-
-            return "<p class='invalid'>✖ This argument is invalid.</p><p><strong>Why?</strong> The conclusion does not logically follow from the premises. Check for missing premises or faulty reasoning.</p>";
-        }
-
-        function detectFallacies(premises, conclusions) {
-            let fallacies = [];
-
-            if (premises.length === 1 && conclusions.length > 0) {
-                fallacies.push("⚠️ Hasty Generalization: The argument is jumping to a conclusion too quickly.");
-            }
-
-            if (premises.some(p => p.toLowerCase().includes("correlation") || p.toLowerCase().includes("cause"))) {
-                fallacies.push("⚠️ False Cause: Correlation does not imply causation.");
-            }
-
-            if (premises.some(p => p.toLowerCase().includes("must be true") || p.toLowerCase().includes("no evidence against"))) {
-                fallacies.push("⚠️ Appeal to Ignorance: Assuming something is true because it hasn’t been proven false.");
-            }
-
-            if (fallacies.length > 0) {
-                return "<h3>Potential Fallacies Detected:</h3>" + fallacies.map(f => `<p class='fallacy'>${f}</p>`).join("");
-            }
-
-            return "<p class='valid'>✅ No major logical fallacies detected.</p>";
+            document.getElementById("output").innerHTML = `<h3>AI Logic Analysis:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
         }
 
         function clearInput() {
