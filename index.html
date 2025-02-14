@@ -1,109 +1,115 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Argument Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://unpkg.com/compromise"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #output { margin-top: 20px; padding: 10px; background: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h1>AI Argument Analyzer</h1>
+    <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea>
+    <button onclick="analyzeArgument()">Analyze</button>
+    <div id="output"></div>
 
-export default function ArgumentAnalyzer() {
-  const [argument, setArgument] = useState("");
-  const [analysis, setAnalysis] = useState(null);
+    <script>
+        function extractStandardForm(argument) {
+            const doc = nlp(argument);
+            const sentences = doc.sentences().out('array');
 
-  const analyzeArgument = () => {
-    const standardForm = extractStandardForm(argument);
-    const validity = checkValidity(standardForm);
-    const strength = evaluateStrength(standardForm);
-    const assumptions = identifyAssumptions(standardForm);
-    const fallacies = detectFallacies(standardForm);
+            let premises = [];
+            let conclusion = "";
 
-    setAnalysis({ standardForm, validity, strength, assumptions, fallacies });
-  };
+            sentences.forEach((sentence, index) => {
+                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                    conclusion = "Conclusion: " + sentence;
+                } else {
+                    premises.push(`P${index + 1}: ${sentence}`);
+                }
+            });
 
-  return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">AI Argument Analyzer</h1>
-      <Textarea
-        placeholder="Enter an argument..."
-        value={argument}
-        onChange={(e) => setArgument(e.target.value)}
-        className="w-full mb-4"
-      />
-      <Button onClick={analyzeArgument}>Analyze</Button>
-      {analysis && (
-        <Card className="mt-6">
-          <CardContent>
-            <h2 className="text-xl font-semibold">Standard Form:</h2>
-            <p>{analysis.standardForm}</p>
-            <h2 className="text-xl font-semibold mt-4">Validity:</h2>
-            <p>{analysis.validity}</p>
-            <h2 className="text-xl font-semibold mt-4">Strength (Inductive Arguments):</h2>
-            <p>{analysis.strength}</p>
-            <h2 className="text-xl font-semibold mt-4">Possible Assumptions:</h2>
-            <ul>
-              {analysis.assumptions.map((assumption, index) => (
-                <li key={index}>- {assumption}</li>
-              ))}
-            </ul>
-            <h2 className="text-xl font-semibold mt-4">Potential Fallacies Detected:</h2>
-            <ul>
-              {analysis.fallacies.map((fallacy, index) => (
-                <li key={index}>! {fallacy}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
+            if (!conclusion && premises.length > 1) {
+                conclusion = "Conclusion: " + premises.pop();
+            } else if (!conclusion) {
+                conclusion = "Conclusion: [Not Explicitly Stated]";
+            }
 
-function extractStandardForm(argument) {
-  return "P1: If X, then Y\nP2: X\nConclusion: Y";
-}
+            return { premises, conclusion };
+        }
 
-function checkValidity(standardForm) {
-  if (standardForm.includes("If") && standardForm.includes("then")) {
-    return "✓ This argument appears valid.";
-  }
-  return "X This argument is invalid. The conclusion does not logically follow from the premises.";
-}
+        function checkValidity(standardForm) {
+            if (standardForm.includes("If") && standardForm.includes("then")) {
+                return "✓ This argument appears valid.";
+            }
+            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
+        }
 
-function evaluateStrength(standardForm) {
-  if (standardForm.includes("most likely") || standardForm.includes("probably")) {
-    return "✓ This argument is strong.";
-  }
-  return "X This argument is weak.";
-}
+        function evaluateStrength(standardForm) {
+            if (standardForm.includes("most likely") || standardForm.includes("probably")) {
+                return "✓ This argument is strong.";
+            }
+            return "X This argument is weak.";
+        }
 
-function identifyAssumptions(standardForm) {
-  return [
-    "The argument might require an additional premise to logically support the conclusion.",
-  ];
-}
+        function identifyAssumptions(standardForm) {
+            return ["The argument might require an additional premise to logically support the conclusion."];
+        }
 
-function detectFallacies(standardForm) {
-  const fallacies = [];
-  if (standardForm.includes("everyone knows")) {
-    fallacies.push("Appeal to Popularity");
-  }
-  if (standardForm.includes("never") || standardForm.includes("always")) {
-    fallacies.push("Hasty Generalization");
-  }
-  if (standardForm.includes("since X happened before Y, Y must be caused by X")) {
-    fallacies.push("False Cause");
-  }
-  if (standardForm.includes("attacks the character instead of the argument")) {
-    fallacies.push("Ad Hominem");
-  }
-  if (standardForm.includes("presents only two choices when more exist")) {
-    fallacies.push("False Dilemma");
-  }
-  if (standardForm.includes("assumes extreme outcomes from minor changes")) {
-    fallacies.push("Slippery Slope");
-  }
-  if (standardForm.includes("the conclusion repeats the premise")) {
-    fallacies.push("Circular Reasoning");
-  }
-  if (standardForm.includes("misrepresenting the opponent’s argument")) {
-    fallacies.push("Straw Man Fallacy");
-  }
-  return fallacies;
-}
+        function detectFallacies(standardForm) {
+            const fallacies = [];
+            if (standardForm.includes("everyone knows")) {
+                fallacies.push("Appeal to Popularity");
+            }
+            if (standardForm.includes("never") || standardForm.includes("always")) {
+                fallacies.push("Hasty Generalization");
+            }
+            if (standardForm.includes("since X happened before Y, Y must be caused by X")) {
+                fallacies.push("False Cause");
+            }
+            if (standardForm.includes("attacks the character instead of the argument")) {
+                fallacies.push("Ad Hominem");
+            }
+            if (standardForm.includes("presents only two choices when more exist")) {
+                fallacies.push("False Dilemma");
+            }
+            if (standardForm.includes("assumes extreme outcomes from minor changes")) {
+                fallacies.push("Slippery Slope");
+            }
+            if (standardForm.includes("the conclusion repeats the premise")) {
+                fallacies.push("Circular Reasoning");
+            }
+            if (standardForm.includes("misrepresenting the opponent’s argument")) {
+                fallacies.push("Straw Man Fallacy");
+            }
+            return fallacies;
+        }
+
+        function analyzeArgument() {
+            const argument = document.getElementById('argumentInput').value.toLowerCase();
+            document.getElementById('output').innerText = "Analyzing...";
+
+            let { premises, conclusion } = extractStandardForm(argument);
+            let analysis = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
+
+            let validity = checkValidity(analysis);
+            let strength = evaluateStrength(analysis);
+            let assumptions = identifyAssumptions(analysis);
+            let fallacies = detectFallacies(analysis);
+
+            analysis += `Validity: ${validity}\n`;
+            analysis += `Strength (if inductive): ${strength}\n`;
+            analysis += `Assumptions: ${assumptions.join(", ")}\n`;
+            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}`;
+
+            document.getElementById('output').innerText = analysis;
+        }
+    </script>
+</body>
+</html>
