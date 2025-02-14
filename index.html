@@ -1,84 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Argument Analyzer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
-            text-align: center;
-            padding: 20px;
-        }
-        h1 {
-            color: #343a40;
-        }
-        textarea {
-            width: 80%;
-            height: 150px;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        #response {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-            white-space: pre-wrap;
-        }
-    </style>
-</head>
-<body>
+<h1>AI Argument Analyzer</h1>
+<p>Enter your argument below, and the AI will analyze its logical structure.</p>
 
-    <h1>AI Argument Analyzer</h1>
-    <p>Enter your argument below, and the AI will analyze its logical structure.</p>
+<textarea id="argumentInput" placeholder="Type your argument here..." style="width: 80%; height: 150px;"></textarea>
+<br>
+<button onclick="analyzeArgument()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Analyze</button>
 
-    <textarea id="argumentInput" placeholder="Type your argument here..."></textarea>
-    <br>
-    <button onclick="analyzeArgument()">Analyze</button>
+<div id="response" style="margin-top: 20px; font-size: 18px; color: #333;"></div>
 
-    <div id="response"></div>
+<script>
+    async function analyzeArgument() {
+        const argument = document.getElementById("argumentInput").value;
+        if (!argument) {
+            alert("Please enter an argument.");
+            return;
+        }
 
-    <script>
-        async function analyzeArgument() {
-            const argument = document.getElementById("argumentInput").value;
-            if (!argument) {
-                alert("Please enter an argument.");
-                return;
+        document.getElementById("response").innerText = "Analyzing argument...";
+
+        const apiUrl = "https://script.googleusercontent.com/macros/echo?user_content_key=6N9bIe22TRx2N14ddkB588h-knmHFmQV-rxrtPZyEv3Sya1COin2RWmr0Tbf2ppg8-b9gW_-bh_cljZpj8J8CAtNevni_Cv3m5_BxDlH2jW0nuo2oDemN9CCS2h10ox_1xSncGQajx_ryfhECjZEnIUQ02Fc5lYk8IkWcqzc_1EJTZQJX2Mink5ZBGW46Zfci7EH-ft0nQEX0VsiIpU-0A&lib=MWtE7qM0vHqIlqispbA_wX6QPy0Un0KGU"; // Replace with your Web App URL
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: "POST", // Ensure it's a POST request
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: argument }) // Send argument to the API
+            });
+
+            if (!response.ok) {
+                throw new Error("Network response was not ok.");
             }
 
-            document.getElementById("response").innerText = "Analyzing argument...";
-
-            // This must be replaced with a real external API that processes arguments
-            const apiUrl = "https://your-external-api.com/analyze"; // External AI service
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ text: argument })
-                });
-
-                const result = await response.json();
-                document.getElementById("response").innerText = result.analysis || "Analysis failed.";
-            } catch (error) {
-                document.getElementById("response").innerText = "Error analyzing argument.";
-            }
+            const result = await response.json();
+            document.getElementById("response").innerText = result.analysis || "Analysis failed.";
+        } catch (error) {
+            document.getElementById("response").innerText = "Error analyzing argument: " + error.message;
         }
-    </script>
-
-</body>
-</html>
+    }
+</script>
