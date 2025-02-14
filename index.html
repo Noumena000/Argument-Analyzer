@@ -55,21 +55,16 @@
         }
 
         function classifyArgumentType(argument) {
-            if (argument.includes("if") && argument.includes("then")) {
-                return "Deductive";
-            } else {
-                return "Inductive";
-            }
+            return argument.includes("if") && argument.includes("then") ? "Deductive" : "Inductive";
         }
 
         function evaluateStrength(argument) {
             if (classifyArgumentType(argument) === "Deductive") {
                 return "N/A (Deductive arguments are not evaluated for strength).";
             }
-            if (argument.includes("most likely") || argument.includes("probably") || argument.includes("statistical data")) {
-                return "✓ This argument is strong.";
-            }
-            return "X This argument is weak.";
+            return argument.includes("most likely") || argument.includes("probably") || argument.includes("statistical data")
+                ? "✓ This argument is strong."
+                : "X This argument is weak.";
         }
 
         async function trainModel() {
@@ -108,30 +103,25 @@
             const vector = tf.tensor2d([textToVector(argument)]);
             const prediction = model.predict(vector);
             const result = await prediction.data();
-            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
+            return result[0] > result[1] ? "✓ This argument is likely valid." : "X This argument is likely invalid.";
         }
 
         async function analyzeArgument() {
-    const argument = document.getElementById('argumentInput').value;
-    document.getElementById('output').innerText = "Analyzing with AI...";
+            const argument = document.getElementById('argumentInput').value;
+            document.getElementById('output').innerText = "Analyzing with AI...";
+            
+            let { premises, conclusion } = extractStandardForm(argument);
+            let argumentType = classifyArgumentType(argument);
+            let strength = evaluateStrength(argument);
+            const aiResult = await analyzeArgumentWithAI(argument);
 
-    let { premises, conclusion } = extractStandardForm(argument);
-    let argumentType = classifyArgumentType(argument);
-    let strength = evaluateStrength(argument);
-    const aiResult = await analyzeArgumentWithAI(argument);
+            let validityAnalysis = argumentType === "Deductive" ? aiResult : strength;
+            if (argumentType === "Deductive") strength = "N/A (Deductive arguments are not evaluated for strength).";
 
-    let validityAnalysis = "";
-    if (argumentType === "Deductive") {
-        validityAnalysis = aiResult.includes("valid") ? "✓ This argument is valid." : "X This argument is invalid.";
-        strength = "N/A (Deductive arguments are not evaluated for strength).";
-    } else {
-        validityAnalysis = strength; // Only display strength for inductive arguments
-    }
-
-    document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
-        `Type: ${argumentType}\n` +
-        `Analysis: ${validityAnalysis}`;
-}
+            document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
+                `Type: ${argumentType}\n` +
+                `Strength: ${strength}\n` +
+                `Analysis: ${validityAnalysis}`;
         }
     </script>
 </body>
