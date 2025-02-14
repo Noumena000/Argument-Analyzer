@@ -6,9 +6,19 @@
     <title>AI Argument Analyzer</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
-        textarea { width: 90%; height: 100px; margin-bottom: 10px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-        #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; text-align: left; width: 80%; margin: auto; }
+        textarea { width: 90%; height: 100px; margin-bottom: 10px; padding: 10px; font-size: 16px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+        #output { 
+            font-size: 18px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            width: 80%;
+            margin: auto;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
         .valid { color: green; font-weight: bold; }
         .invalid { color: red; font-weight: bold; }
     </style>
@@ -17,8 +27,9 @@
 
     <h2>AI Argument Analyzer</h2>
     <p>Enter an argument below, and the tool will format it into standard form and determine if it is logically valid.</p>
-    <textarea id="argumentInput" placeholder="Type your argument here..." rows="5" cols="60"></textarea><br>
+    <textarea id="argumentInput" placeholder="Type your argument here..." rows="5"></textarea><br>
     <button onclick="analyzeArgument()">Analyze</button>
+    <button onclick="clearInput()">Clear</button>
 
     <div id="output"></div>
 
@@ -26,7 +37,7 @@
         function analyzeArgument() {
             let text = document.getElementById("argumentInput").value.trim();
             let premises = [];
-            let conclusion = "";
+            let conclusions = [];
 
             const conclusionKeywords = ["therefore", "hence", "thus", "so", "consequently"];
             let sentences = text.match(/(?:if\s[^.!?]+then\s[^.!?]+|[^.!?]+[.!?]+)/gi) || [];
@@ -41,40 +52,60 @@
                 let lowerSentence = sentence.toLowerCase();
 
                 if (conclusionKeywords.some(word => lowerSentence.includes(word))) {
-                    conclusion = sentence;
+                    conclusions.push(sentence);
                 } else {
                     premises.push(sentence);
                 }
             }
 
-            if (premises.length >= 2 && !conclusion) {
-                conclusion = premises.pop();
+            if (premises.length >= 2 && conclusions.length === 0) {
+                conclusions.push(premises.pop());
             }
 
             let outputHTML = "<h3>Standard Form:</h3>";
             premises.forEach((p, i) => outputHTML += `<p><strong>P${i+1}:</strong> ${p}</p>`);
-            outputHTML += conclusion ? `<p><strong>Conclusion:</strong> ${conclusion}</p>` : `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
+            conclusions.forEach((c, i) => outputHTML += `<p><strong>Conclusion ${i+1}:</strong> ${c}</p>`);
+            if (conclusions.length === 0) {
+                outputHTML += `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
+            }
 
-            let isValid = checkValidity(premises, conclusion);
-            outputHTML += isValid ? `<p class='valid'>✔ This argument is logically valid.</p>` : `<p class='invalid'>✖ This argument is invalid.</p>`;
+            let isValid = checkValidity(premises, conclusions);
+            if (isValid) {
+                outputHTML += `<p class='valid'>✔ This argument is logically valid.</p>`;
+            } else {
+                outputHTML += `<p class='invalid'>✖ This argument is invalid.</p>`;
+                outputHTML += `<p><strong>Why?</strong> The conclusion does not logically follow from the premises. Check for missing premises or faulty reasoning.</p>`;
+            }
 
             document.getElementById("output").innerHTML = outputHTML;
         }
 
-        function checkValidity(premises, conclusion) {
-            if (premises.length < 2 || !conclusion) return false;
+        function checkValidity(premises, conclusions) {
+            if (premises.length < 2 || conclusions.length === 0) return false;
 
-            let premiseWords = premises.map(p => p.toLowerCase().split(" "));
-            let conclusionWords = conclusion.toLowerCase().split(" ");
+            let lowerPremises = premises.map(p => p.toLowerCase());
+            let lowerConclusions = conclusions.map(c => c.toLowerCase());
 
-            let matches = 0;
-            for (let word of conclusionWords) {
-                if (premiseWords.some(premise => premise.includes(word))) {
-                    matches++;
-                }
-            }
+            // Check for Modus Ponens (If P then Q, P, therefore Q)
+            let modusPonens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
+                              lowerPremises.some(p => lowerConclusions.some(c => c.includes(p.split("then ")[1])));
 
-            return matches / conclusionWords.length > 0.5; // At least 50% word overlap with premises
+            // Check for Modus Tollens (If P then Q, Not Q, therefore Not P)
+            let modusTollens = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
+                               lowerPremises.some(p => p.includes("not") && lowerConclusions.some(c => c.includes("not")));
+
+            // Check for Hypothetical Syllogism (If P then Q, If Q then R, therefore If P then R)
+            let hypotheticalSyllogism = lowerPremises.length >= 2 &&
+                                        lowerPremises[0].includes("if") && lowerPremises[0].includes("then") &&
+                                        lowerPremises[1].includes("if") && lowerPremises[1].includes("then") &&
+                                        lowerConclusions.some(c => c.includes("if") && c.includes("then"));
+
+            return modusPonens || modusTollens || hypotheticalSyllogism;
+        }
+
+        function clearInput() {
+            document.getElementById("argumentInput").value = "";
+            document.getElementById("output").innerHTML = "";
         }
     </script>
 
