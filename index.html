@@ -21,9 +21,12 @@
 
         try {
             const response = await fetch(apiUrl, {
-                method: "POST", // Ensure it's a POST request
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: argument }) // Send argument to the API
+                method: "POST", // Ensure this is a POST request
+                headers: { 
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: argument }) // Send argument data
             });
 
             if (!response.ok) {
