@@ -5,34 +5,36 @@ function standardizeArgument() {
         return;
     }
 
-    // Expanded list of conclusion indicators
+    // Expanded conclusion indicators
     const conclusionIndicators = [
         "therefore", "thus", "hence", "so", "consequently",
         "it follows that", "we can conclude that", "which means that",
         "this implies that", "ergo", "accordingly", "as a result"
     ];
 
-    // Split sentences properly (supports commas, semicolons, periods)
-    let sentences = argument.split(/(?<=[.?!;])\s+/);
+    // Improve sentence splitting: Keep commas intact
+    let sentences = argument.split(/(?<=\.|\?|!)\s+/);
     let premises = [];
     let conclusion = "";
 
-    for (let sentence of sentences) {
-        let lowerSentence = sentence.toLowerCase().trim();
+    for (let i = 0; i < sentences.length; i++) {
+        let sentence = sentences[i].trim();
+        let lowerSentence = sentence.toLowerCase();
+
+        // Ensure conclusions are captured as full sentences
         if (conclusionIndicators.some(word => lowerSentence.includes(word))) {
-            conclusion = sentence;  // Store only the detected conclusion
+            conclusion = sentence;
+            // If the conclusion was split, add the next sentence (if it exists)
+            if (i + 1 < sentences.length) {
+                conclusion += " " + sentences[i + 1];
+                i++; // Skip the next sentence since it's part of the conclusion
+            }
         } else {
             premises.push(sentence);
         }
     }
 
-    // Ensure all premises are correctly captured
-    if (premises.length === 0 && conclusion) {
-        premises.push(conclusion);
-        conclusion = "";
-    }
-
-    // If no conclusion is explicitly detected, allow the last premise to be the conclusion
+    // Ensure last sentence is the conclusion if none was explicitly detected
     if (!conclusion && premises.length > 1) {
         conclusion = premises.pop();
     }
