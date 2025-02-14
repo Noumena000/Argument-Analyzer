@@ -1,42 +1,95 @@
-<h1>AI Argument Analyzer</h1>
-<p>Enter your argument below, and the AI will analyze its logical structure.</p>
-
-<textarea id="argumentInput" placeholder="Type your argument here..." style="width: 80%; height: 150px;"></textarea>
-<br>
-<button onclick="analyzeArgument()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Analyze</button>
-
-<div id="response" style="margin-top: 20px; font-size: 18px; color: #333;"></div>
-
-<script>
-    async function analyzeArgument() {
-        const argument = document.getElementById("argumentInput").value;
-        if (!argument) {
-            alert("Please enter an argument.");
-            return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Argument Standardizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 20px;
         }
+        h1 {
+            color: #343a40;
+        }
+        textarea {
+            width: 80%;
+            height: 150px;
+            margin-bottom: 10px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .output {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+            text-align: left;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Argument Standardizer</h1>
+    <p>Enter an argument below, and the tool will separate **premises** and **conclusions**.</p>
 
-        document.getElementById("response").innerText = "Analyzing argument...";
+    <textarea id="argumentInput" placeholder="Enter your argument here..."></textarea><br>
+    <button class="btn" onclick="standardizeArgument()">Standardize</button>
 
-        const apiUrl = "https://script.googleusercontent.com/macros/echo?user_content_key=6N9bIe22TRx2N14ddkB588h-knmHFmQV-rxrtPZyEv3Sya1COin2RWmr0Tbf2ppg8-b9gW_-bh_cljZpj8J8CAtNevni_Cv3m5_BxDlH2jW0nuo2oDemN9CCS2h10ox_1xSncGQajx_ryfhECjZEnIUQ02Fc5lYk8IkWcqzc_1EJTZQJX2Mink5ZBGW46Zfci7EH-ft0nQEX0VsiIpU-0A&lib=MWtE7qM0vHqIlqispbA_wX6QPy0Un0KGU"; // Replace with your Web App URL
+    <div id="response" class="output"></div>
 
-        try {
-            const response = await fetch(apiUrl, {
-                method: "POST", // Ensure this is a POST request
-                headers: { 
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ text: argument }) // Send argument data
-            });
-
-            if (!response.ok) {
-                throw new Error("Network response was not ok.");
+    <script>
+        function standardizeArgument() {
+            const argument = document.getElementById("argumentInput").value.trim();
+            if (!argument) {
+                alert("Please enter an argument.");
+                return;
             }
 
-            const result = await response.json();
-            document.getElementById("response").innerText = result.analysis || "Analysis failed.";
-        } catch (error) {
-            document.getElementById("response").innerText = "Error analyzing argument: " + error.message;
+            // Define keywords that indicate a conclusion
+            const conclusionIndicators = ["therefore", "thus", "hence", "so", "consequently", "it follows that", "we can conclude that"];
+
+            // Split sentences by periods, question marks, or exclamation marks
+            let sentences = argument.split(/(?<=[.?!])\s+/);
+            let premises = [];
+            let conclusion = "";
+
+            for (let sentence of sentences) {
+                let lowerSentence = sentence.toLowerCase();
+                if (conclusionIndicators.some(word => lowerSentence.includes(word))) {
+                    conclusion = sentence;
+                } else {
+                    premises.push(sentence);
+                }
+            }
+
+            // Format the output
+            let output = "<strong>Standard Form:</strong><br><br>";
+            premises.forEach((premise, index) => {
+                output += `(P${index + 1}) ${premise}<br>`;
+            });
+
+            if (conclusion) {
+                output += `<br>(C) ${conclusion}`;
+            } else {
+                output += "<br><strong>No conclusion detected.</strong>";
+            }
+
+            document.getElementById("response").innerHTML = output;
         }
-    }
-</script>
+    </script>
+</body>
+</html>
