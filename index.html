@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://unpkg.com/compromise"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: auto; padding: 20px; }
         textarea { width: 100%; height: 100px; margin-bottom: 10px; }
         button { padding: 10px 20px; font-size: 16px; }
         #output { margin-top: 20px; padding: 10px; background: #f4f4f4; white-space: pre-line; }
@@ -20,76 +20,82 @@
     <div id="output"></div>
 
     <script>
-        let model;
+        function extractStandardForm(argument) {
+            const doc = nlp(argument);
+            const sentences = doc.sentences().out('array');
+            let premises = [];
+            let conclusion = "";
 
-        async function loadModel() {
-            model = tf.sequential();
-            model.add(tf.layers.dense({ inputShape: [50], units: 32, activation: 'relu' }));
-            model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
-            model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
-            model.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
-        }
-
-        function textToVector(text) {
-            let vector = new Array(50).fill(0);
-            const words = text.toLowerCase().split(" ");
-            words.forEach((word, index) => {
-                if (index < 50) {
-                    vector[index] = word.length;
+            sentences.forEach((sentence, index) => {
+                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                    conclusion = "Conclusion: " + sentence.replace(/(therefore|thus|hence|so)/i, "").trim();
+                } else {
+                    premises.push(`P${index + 1}: ${sentence}`);
                 }
             });
-            return vector;
+
+            if (!conclusion && premises.length > 1) {
+                conclusion = "Conclusion: " + premises.pop();
+            } else if (!conclusion) {
+                conclusion = "Conclusion: [Not Explicitly Stated]";
+            }
+
+            return { premises, conclusion };
         }
 
-        async function trainModel() {
-            if (!model) await loadModel();
-            const trainingData = [
-                { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
-                { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
-                { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
-                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] },
-                { input: "If P, then Q. Q. Therefore, P.", output: [0, 1] }, // Affirming the Consequent
-                { input: "If P, then Q. Not P. Therefore, not Q.", output: [0, 1] }, // Denying the Antecedent
-                { input: "All A are C. All B are C. Therefore, all A are B.", output: [0, 1] }, // Undistributed Middle
-                { input: "Either P or Q. Not P. Therefore, Q.", output: [1, 0] }, // Disjunctive Syllogism
-                { input: "The ground is wet. The best explanation is that it rained. Therefore, it probably rained.", output: [1, 0] } // Abductive Reasoning
-            ];
-            const vectorizedData = trainingData.map(d => ({ input: textToVector(d.input), output: d.output }));
-            const xs = tf.tensor2d(vectorizedData.map(d => d.input));
-            const ys = tf.tensor2d(vectorizedData.map(d => d.output));
-            await model.fit(xs, ys, { epochs: 50 });
-            console.log("Model training complete!");
+        function convertToLogicalForm(standardForm) {
+            let logicalForm = standardForm.replace(/if /gi, "P → ")
+                                         .replace(/then /gi, "Q")
+                                         .replace(/or /gi, " ∨ ")
+                                         .replace(/not /gi, "¬");
+            return logicalForm;
         }
 
-        async function analyzeArgumentWithAI(argument) {
-            if (!model) await trainModel();
-            const vector = tf.tensor2d([textToVector(argument)]);
-            const prediction = model.predict(vector);
-            const result = await prediction.data();
-            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
+        function checkValidity(logicalForm) {
+            if (logicalForm.includes("P → Q") && logicalForm.includes("P") && logicalForm.includes("∴ Q")) {
+                return "✓ This argument follows Modus Ponens and is valid.";
+            }
+            if (logicalForm.includes("P → Q") && logicalForm.includes("¬Q") && logicalForm.includes("∴ ¬P")) {
+                return "✓ This argument follows Modus Tollens and is valid.";
+            }
+            if (logicalForm.includes("P → Q") && logicalForm.includes("Q → R") && logicalForm.includes("∴ P → R")) {
+                return "✓ This argument follows Hypothetical Syllogism and is valid.";
+            }
+            if (logicalForm.includes("P ∨ Q") && logicalForm.includes("¬P") && logicalForm.includes("∴ Q")) {
+                return "✓ This argument follows Disjunctive Syllogism and is valid.";
+            }
+            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
         }
 
-        function classifyArgumentType(argument) {
-            return argument.includes("if") && argument.includes("then") ? "Deductive" : "Inductive";
+        function detectFallacies(logicalForm) {
+            const fallacies = [];
+            if (logicalForm.includes("P → Q") && logicalForm.includes("Q") && logicalForm.includes("∴ P")) {
+                fallacies.push("Affirming the Consequent");
+            }
+            if (logicalForm.includes("P → Q") && logicalForm.includes("¬P") && logicalForm.includes("∴ ¬Q")) {
+                fallacies.push("Denying the Antecedent");
+            }
+            if (logicalForm.includes("All A are C") && logicalForm.includes("All B are C") && logicalForm.includes("∴ All A are B")) {
+                fallacies.push("Undistributed Middle");
+            }
+            return fallacies;
         }
 
-        function evaluateStrength(argument) {
-            return classifyArgumentType(argument) === "Deductive" ? "N/A (Deductive arguments are not evaluated for strength)." : (argument.includes("most likely") || argument.includes("probably") ? "✓ Strong." : "X Weak.");
-        }
-
-        async function analyzeArgument() {
+        function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value;
-            document.getElementById('output').innerText = "Analyzing with AI...";
+            document.getElementById('output').innerText = "Analyzing...";
 
-            let aiResult = await analyzeArgumentWithAI(argument);
-            let argumentType = classifyArgumentType(argument);
-            let strength = evaluateStrength(argument);
+            let { premises, conclusion } = extractStandardForm(argument);
+            let standardForm = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
+            let logicalForm = convertToLogicalForm(standardForm);
+            let validity = checkValidity(logicalForm);
+            let fallacies = detectFallacies(logicalForm);
 
-            document.getElementById('output').innerHTML = `
-                <b>Type:</b> ${argumentType}<br>
-                <b>Strength:</b> ${strength}<br>
-                <b>Analysis:</b> ${aiResult}
-            `;
+            let analysis = `${standardForm}**Logical Form:**\n${logicalForm}\n\n`;
+            analysis += `Validity: ${validity}\n`;
+            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}`;
+
+            document.getElementById('output').innerText = analysis;
         }
     </script>
 </body>
