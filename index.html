@@ -55,7 +55,26 @@
         }
 
         function classifyArgumentType(argument) {
-            return argument.includes("if") && argument.includes("then") ? "Deductive" : "Inductive";
+            const lowerCaseArg = argument.toLowerCase();
+            if ((lowerCaseArg.match(/if/gi) || []).length >= 2 && (lowerCaseArg.match(/then/gi) || []).length >= 2) {
+                return "Deductive"; // Hypothetical Syllogism
+            } 
+            if (lowerCaseArg.includes("if") && lowerCaseArg.includes("then")) {
+                return "Deductive"; // Modus Ponens or Modus Tollens
+            }
+            if (lowerCaseArg.includes("or") && lowerCaseArg.includes("not")) {
+                return "Deductive"; // Disjunctive Syllogism
+            }
+            if (lowerCaseArg.includes("all") && lowerCaseArg.includes("therefore")) {
+                return "Deductive"; // Barbara Syllogism
+            }
+            if (lowerCaseArg.includes("suppose") && lowerCaseArg.includes("therefore")) {
+                return "Deductive"; // Reductio ad Absurdum
+            }
+            if (lowerCaseArg.includes("either") && lowerCaseArg.includes("if") && lowerCaseArg.includes("then") && lowerCaseArg.includes("therefore")) {
+                return "Deductive"; // Proof by Cases
+            }
+            return "Inductive";
         }
 
         function evaluateStrength(argument) {
@@ -81,9 +100,8 @@
 
             const trainingData = [
                 { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
-                { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
-                { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
-                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
+                { input: "If the light is on, then the switch is flipped. The light is not on. Therefore, the switch is not flipped.", output: [1, 0] },
+                { input: "All humans are mortal. All mortals die. Therefore, all humans die.", output: [1, 0] }
             ];
 
             const vectorizedData = trainingData.map(d => ({
@@ -103,7 +121,7 @@
             const vector = tf.tensor2d([textToVector(argument)]);
             const prediction = model.predict(vector);
             const result = await prediction.data();
-            return result[0] > result[1] ? "✓ This argument is likely valid." : "X This argument is likely invalid.";
+            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
         }
 
         async function analyzeArgument() {
