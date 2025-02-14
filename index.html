@@ -47,7 +47,12 @@
                 { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
                 { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
                 { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
-                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
+                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] },
+                { input: "If P, then Q. Q. Therefore, P.", output: [0, 1] }, // Affirming the Consequent
+                { input: "If P, then Q. Not P. Therefore, not Q.", output: [0, 1] }, // Denying the Antecedent
+                { input: "All A are C. All B are C. Therefore, all A are B.", output: [0, 1] }, // Undistributed Middle
+                { input: "Either P or Q. Not P. Therefore, Q.", output: [1, 0] }, // Disjunctive Syllogism
+                { input: "The ground is wet. The best explanation is that it rained. Therefore, it probably rained.", output: [1, 0] } // Abductive Reasoning
             ];
             const vectorizedData = trainingData.map(d => ({ input: textToVector(d.input), output: d.output }));
             const xs = tf.tensor2d(vectorizedData.map(d => d.input));
