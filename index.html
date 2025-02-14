@@ -77,10 +77,27 @@
         function determineArgumentType(premises, conclusion) {
             if (premises.length < 2 || !conclusion) return "<p class='invalid'>❌ Insufficient premises to determine validity.</p>";
 
+            // **Check for Deductive Argument Patterns**
+            let modusPonens = premises.some(p => p.toLowerCase().includes("if") && p.toLowerCase().includes("then"))
+                               && premises.some(p => conclusion.toLowerCase().includes(p.split("then ")[1]));
+
+            let modusTollens = premises.some(p => p.toLowerCase().includes("if") && p.toLowerCase().includes("then"))
+                               && premises.some(p => p.toLowerCase().includes("not") && conclusion.toLowerCase().includes("not"));
+
+            let hypotheticalSyllogism = premises.length === 3 &&
+                                        premises[0].toLowerCase().includes("if") && premises[0].toLowerCase().includes("then") &&
+                                        premises[1].toLowerCase().includes("if") && premises[1].toLowerCase().includes("then") &&
+                                        conclusion.toLowerCase().includes("if") && conclusion.toLowerCase().includes("then");
+
+            if (modusPonens || modusTollens || hypotheticalSyllogism) {
+                return "<p class='valid'>✔ Deductive argument: Logically valid.</p>";
+            }
+
+            // **Check for Inductive Argument Strength**
             let premiseWords = premises.map(p => p.toLowerCase().split(" "));
             let conclusionWords = conclusion.toLowerCase().split(" ");
-
             let matches = 0;
+
             for (let word of conclusionWords) {
                 if (premiseWords.some(premise => premise.includes(word))) {
                     matches++;
