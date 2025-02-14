@@ -20,13 +20,23 @@
     <div id="output"></div>
 
     <script>
-        async function analyzeArgumentWithAI(argument) {
-            const model = await tf.loadLayersModel('https://path-to-your-trained-model/model.json');
-            const vectorizedInput = textToVector(argument);
-            const tensorInput = tf.tensor2d([vectorizedInput]);
-            const prediction = model.predict(tensorInput);
-            const result = await prediction.data();
-            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
+        async function analyzeArgument() {
+            const argument = document.getElementById('argumentInput').value;
+            document.getElementById('output').innerText = "Analyzing...";
+
+            let { premises, conclusion } = extractStandardForm(argument);
+            let standardForm = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
+            let logicalForm = convertToLogicalForm(standardForm);
+            let validity = checkValidity(logicalForm);
+            let fallacies = detectFallacies(logicalForm);
+            let aiAnalysis = await analyzeWithAI(argument);
+
+            let analysis = `${standardForm}**Logical Form:**\n${logicalForm}\n\n`;
+            analysis += `Validity: ${validity}\n`;
+            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}\n`;
+            analysis += `AI Analysis: ${aiAnalysis}`;
+
+            document.getElementById('output').innerText = analysis;
         }
 
         function extractStandardForm(argument) {
@@ -36,7 +46,7 @@
             let conclusion = "";
 
             sentences.forEach((sentence, index) => {
-                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
+                if (sentence.match(/(therefore|thus|hence|so)/i)) {
                     conclusion = "Conclusion: " + sentence.replace(/(therefore|thus|hence|so)/i, "").trim();
                 } else {
                     premises.push(`P${index + 1}: ${sentence}`);
@@ -53,11 +63,10 @@
         }
 
         function convertToLogicalForm(standardForm) {
-            let logicalForm = standardForm.replace(/if /gi, "P → ")
-                                         .replace(/then /gi, "Q")
-                                         .replace(/or /gi, " ∨ ")
-                                         .replace(/not /gi, "¬");
-            return logicalForm;
+            return standardForm.replace(/if /gi, "P → ")
+                               .replace(/then /gi, "Q")
+                               .replace(/or /gi, " ∨ ")
+                               .replace(/not /gi, "¬");
         }
 
         function checkValidity(logicalForm) {
@@ -90,23 +99,38 @@
             return fallacies;
         }
 
-        async function analyzeArgument() {
-            const argument = document.getElementById('argumentInput').value;
-            document.getElementById('output').innerText = "Analyzing...";
+        async function analyzeWithAI(argument) {
+            const model = await loadAIModel();
+            const vector = tf.tensor2d([textToVector(argument)]);
+            const prediction = model.predict(vector);
+            const result = await prediction.data();
+            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
+        }
 
-            let { premises, conclusion } = extractStandardForm(argument);
-            let standardForm = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
-            let logicalForm = convertToLogicalForm(standardForm);
-            let validity = checkValidity(logicalForm);
-            let fallacies = detectFallacies(logicalForm);
-            let aiAnalysis = await analyzeArgumentWithAI(argument);
+        async function loadAIModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ inputShape: [50], units: 32, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
 
-            let analysis = `${standardForm}**Logical Form:**\n${logicalForm}\n\n`;
-            analysis += `Validity: ${validity}\n`;
-            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}\n`;
-            analysis += `Analysis: ${aiAnalysis}`;
+            model.compile({
+                optimizer: 'adam',
+                loss: 'categoricalCrossentropy',
+                metrics: ['accuracy']
+            });
 
-            document.getElementById('output').innerText = analysis;
+            return model;
+        }
+
+        function textToVector(text) {
+            let vector = new Array(50).fill(0);
+            const words = text.toLowerCase().split(" ");
+            words.forEach((word, index) => {
+                if (index < 50) {
+                    vector[index] = word.length;
+                }
+            });
+            return vector;
         }
     </script>
 </body>
