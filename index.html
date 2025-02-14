@@ -20,6 +20,16 @@
     <div id="output"></div>
 
     <script>
+        let model;
+
+        async function loadModel() {
+            model = tf.sequential();
+            model.add(tf.layers.dense({ inputShape: [50], units: 32, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+            model.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+        }
+
         function textToVector(text) {
             let vector = new Array(50).fill(0);
             const words = text.toLowerCase().split(" ");
@@ -31,82 +41,35 @@
             return vector;
         }
 
-        function extractStandardForm(argument) {
-            const doc = nlp(argument);
-            const sentences = doc.sentences().out('array');
-            let premises = [];
-            let conclusion = "";
-
-            sentences.forEach((sentence, index) => {
-                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
-                    conclusion = "Conclusion: " + sentence;
-                } else {
-                    premises.push(`P${index + 1}: ${sentence}`);
-                }
-            });
-
-            if (!conclusion && premises.length > 1) {
-                conclusion = "Conclusion: " + premises.pop().replace(/^P\d+:\s*/, '');
-            } else if (!conclusion) {
-                conclusion = "Conclusion: [Not Explicitly Stated]";
-            }
-
-            return { premises, conclusion };
+        async function trainModel() {
+            if (!model) await loadModel();
+            const trainingData = [
+                { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
+                { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
+                { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
+                { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
+            ];
+            const vectorizedData = trainingData.map(d => ({ input: textToVector(d.input), output: d.output }));
+            const xs = tf.tensor2d(vectorizedData.map(d => d.input));
+            const ys = tf.tensor2d(vectorizedData.map(d => d.output));
+            await model.fit(xs, ys, { epochs: 50 });
+            console.log("Model training complete!");
         }
 
-        function checkValidity(standardForm) {
-            const lowerForm = standardForm.toLowerCase();
-
-            // Extract premises and conclusion
-            const premise1 = standardForm.match(/p1: if (.*?), then (.*)/i);
-            const premise2 = standardForm.match(/p2: (.*?)/i);
-            const conclusion = standardForm.match(/conclusion: (.*?)/i);
-
-            if (premise1 && premise2 && conclusion) {
-                const ifClause = premise1[1]?.trim();
-                const thenClause = premise1[2]?.trim();
-                const secondPremise = premise2[1]?.trim();
-                const derivedConclusion = conclusion[1]?.trim();
-
-                // ✅ Detect **Modus Ponens (Valid)**
-                if (secondPremise === ifClause && derivedConclusion === thenClause) {
-                    return "✓ This argument follows Modus Ponens and is valid.";
-                }
-
-                // ❌ Detect **Affirming the Consequent (Invalid)**
-                if (secondPremise === thenClause && derivedConclusion === ifClause) {
-                    return "X This argument is invalid. (Affirming the Consequent Fallacy).";
-                }
-            }
-
-            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
-        }
-
-        function classifyArgumentType(argument) {
-            const lowerCaseArg = argument.toLowerCase();
-            if ((lowerCaseArg.match(/if/gi) || []).length >= 2 && (lowerCaseArg.match(/then/gi) || []).length >= 2) {
-                return "Deductive"; // Hypothetical Syllogism
-            } 
-            if (lowerCaseArg.includes("if") && lowerCaseArg.includes("then")) {
-                return "Deductive"; // Modus Ponens or Modus Tollens
-            }
-            if (lowerCaseArg.includes("or") && lowerCaseArg.includes("not")) {
-                return "Deductive"; // Disjunctive Syllogism
-            }
-            return "Inductive";
+        async function analyzeArgumentWithAI(argument) {
+            if (!model) await trainModel();
+            const vector = tf.tensor2d([textToVector(argument)]);
+            const prediction = model.predict(vector);
+            const result = await prediction.data();
+            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
         }
 
         async function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value;
             document.getElementById('output').innerText = "Analyzing with AI...";
-            
-            let { premises, conclusion } = extractStandardForm(argument);
-            let argumentType = classifyArgumentType(argument);
-            let validityAnalysis = checkValidity(`${premises.join("\n")}\n${conclusion}`);
 
-            document.getElementById('output').innerText = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n` +
-                `Type: ${argumentType}\n` +
-                `Analysis: ${validityAnalysis}`;
+            let aiResult = await analyzeArgumentWithAI(argument);
+            document.getElementById('output').innerText = aiResult;
         }
     </script>
 </body>
