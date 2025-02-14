@@ -20,133 +20,61 @@
     <div id="output"></div>
 
     <script>
-        function extractStandardForm(argument) {
-            const doc = nlp(argument);
-            const sentences = doc.sentences().out('array');
-            let premises = [];
-            let conclusion = "";
-
-            sentences.forEach((sentence, index) => {
-                if (sentence.includes("therefore") || sentence.includes("thus") || sentence.includes("hence") || sentence.includes("so")) {
-                    conclusion = "Conclusion: " + sentence;
-                } else {
-                    premises.push(`P${index + 1}: ${sentence}`);
+        function textToVector(text) {
+            let vector = new Array(50).fill(0);
+            const words = text.toLowerCase().split(" ");
+            words.forEach((word, index) => {
+                if (index < 50) {
+                    vector[index] = word.length;
                 }
             });
-
-            if (!conclusion && premises.length > 1) {
-                conclusion = "Conclusion: " + premises.pop();
-            } else if (!conclusion) {
-                conclusion = "Conclusion: [Not Explicitly Stated]";
-            }
-
-            return { premises, conclusion };
+            return vector;
         }
 
-        function checkValidity(standardForm) {
-            const lowerForm = standardForm.toLowerCase();
+        const trainingData = [
+            { input: "If it rains, then the ground is wet. It is raining. Therefore, the ground is wet.", output: [1, 0] },
+            { input: "If it rains, then the ground is wet. The ground is wet. Therefore, it is raining.", output: [0, 1] },
+            { input: "Most dogs bark. Max is a dog. Therefore, Max probably barks.", output: [1, 0] },
+            { input: "Some people from NY are rude. John is from NY. Therefore, John is rude.", output: [0, 1] }
+        ];
 
-            // Detect Modus Ponens (MP)
-            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
-                const premise1 = standardForm.match(/p1: if (.*?), then (.*)/i);
-                const premise2 = standardForm.match(/p2: (.*?)/i);
-                const conclusion = standardForm.match(/conclusion: (.*?)/i);
+        const vectorizedData = trainingData.map(d => ({
+            input: textToVector(d.input),
+            output: d.output
+        }));
 
-                if (premise1 && premise2 && conclusion) {
-                    const ifClause = premise1[1]?.trim() || "";
-                    const thenClause = premise1[2]?.trim() || "";
+        async function trainModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ inputShape: [50], units: 32, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
 
-                    if (premise2[1]?.trim() === ifClause && conclusion[1]?.trim() === thenClause) {
-                        return "✓ This argument follows Modus Ponens and is valid.";
-                    }
-                }
-            }
+            model.compile({
+                optimizer: 'adam',
+                loss: 'categoricalCrossentropy',
+                metrics: ['accuracy']
+            });
 
-            // Detect Modus Tollens (MT)
-            if (lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
-                return "✓ This argument follows Modus Tollens and is valid.";
-            }
-
-            // Detect Hypothetical Syllogism (HS)
-            if (lowerForm.includes("if") && lowerForm.includes("then") && (lowerForm.match(/if (.*?), then (.*)/g) || []).length === 2) {
-                return "✓ This argument follows Hypothetical Syllogism and is valid.";
-            }
-
-            // Detect Disjunctive Syllogism (DS)
-            if (lowerForm.includes("either") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
-                return "✓ This argument follows Disjunctive Syllogism and is valid.";
-            }
-
-            // Detect Constructive Dilemma
-            if (lowerForm.includes("either") && lowerForm.includes("if") && lowerForm.includes("then") && lowerForm.includes("therefore")) {
-                return "✓ This argument follows Constructive Dilemma and is valid.";
-            }
-
-            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
+            const xs = tf.tensor2d(vectorizedData.map(d => d.input));
+            const ys = tf.tensor2d(vectorizedData.map(d => d.output));
+            await model.fit(xs, ys, { epochs: 100 });
+            console.log("Model training complete!");
+            return model;
         }
 
-        function evaluateStrength(standardForm) {
-            const lowerForm = standardForm.toLowerCase();
-            if (lowerForm.includes("if") && lowerForm.includes("then")) {
-                return "N/A (Deductive arguments are not evaluated for strength).";
-            }
-            if (lowerForm.includes("most likely") || lowerForm.includes("probably") || lowerForm.includes("statistical data")) {
-                return "✓ This argument is strong.";
-            }
-            return "X This argument is weak.";
+        async function analyzeArgumentWithAI(argument) {
+            const model = await trainModel();
+            const vector = tf.tensor2d([textToVector(argument)]);
+            const prediction = model.predict(vector);
+            const result = await prediction.data();
+            return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
         }
 
-        function identifyAssumptions(standardForm) {
-            return ["The argument might require an additional premise to logically support the conclusion."];
-        }
-
-        function detectFallacies(standardForm) {
-            const fallacies = [];
-            if (standardForm.includes("everyone knows")) {
-                fallacies.push("Appeal to Popularity");
-            }
-            if (standardForm.includes("never") || standardForm.includes("always")) {
-                fallacies.push("Hasty Generalization");
-            }
-            if (standardForm.includes("since X happened before Y, Y must be caused by X")) {
-                fallacies.push("False Cause");
-            }
-            if (standardForm.includes("attacks the character instead of the argument")) {
-                fallacies.push("Ad Hominem");
-            }
-            if (standardForm.includes("presents only two choices when more exist")) {
-                fallacies.push("False Dilemma");
-            }
-            if (standardForm.includes("assumes extreme outcomes from minor changes")) {
-                fallacies.push("Slippery Slope");
-            }
-            if (standardForm.includes("the conclusion repeats the premise")) {
-                fallacies.push("Circular Reasoning");
-            }
-            if (standardForm.includes("misrepresenting the opponent’s argument")) {
-                fallacies.push("Straw Man Fallacy");
-            }
-            return fallacies;
-        }
-
-        function analyzeArgument() {
-            const argument = document.getElementById('argumentInput').value.toLowerCase();
-            document.getElementById('output').innerText = "Analyzing...";
-
-            let { premises, conclusion } = extractStandardForm(argument);
-            let analysis = `**Standard Form:**\n${premises.join("\n")}\n${conclusion}\n\n`;
-
-            let validity = checkValidity(analysis);
-            let strength = evaluateStrength(analysis);
-            let assumptions = identifyAssumptions(analysis);
-            let fallacies = detectFallacies(analysis);
-
-            analysis += `Validity: ${validity}\n`;
-            analysis += `Strength (if inductive): ${strength}\n`;
-            analysis += `Assumptions: ${assumptions.join(", ")}\n`;
-            analysis += `Fallacies Detected: ${fallacies.join(", ") || "None detected"}`;
-
-            document.getElementById('output').innerText = analysis;
+        async function analyzeArgument() {
+            const argument = document.getElementById('argumentInput').value;
+            document.getElementById('output').innerText = "Analyzing with AI...";
+            const aiResult = await analyzeArgumentWithAI(argument);
+            document.getElementById('output').innerText = aiResult;
         }
     </script>
 </body>
