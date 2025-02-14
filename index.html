@@ -20,6 +20,17 @@
     <div id="output"></div>
 
     <script>
+        function textToVector(text) {
+            let vector = new Array(50).fill(0);
+            const words = text.toLowerCase().split(" ");
+            words.forEach((word, index) => {
+                if (index < 50) {
+                    vector[index] = word.length;
+                }
+            });
+            return vector;
+        }
+
         function extractStandardForm(argument) {
             const doc = nlp(argument);
             const sentences = doc.sentences().out('array');
@@ -45,6 +56,8 @@
 
         function checkValidity(standardForm) {
             const lowerForm = standardForm.toLowerCase();
+
+            // Extract premises and conclusion
             const premise1 = standardForm.match(/p1: if (.*?), then (.*)/i);
             const premise2 = standardForm.match(/p2: (.*?)/i);
             const conclusion = standardForm.match(/conclusion: (.*?)/i);
@@ -55,47 +68,37 @@
                 const secondPremise = premise2[1]?.trim();
                 const derivedConclusion = conclusion[1]?.trim();
 
+                // ✅ Detect **Modus Ponens (Valid)**
                 if (secondPremise === ifClause && derivedConclusion === thenClause) {
-                    return "✓ Valid: Modus Ponens";
+                    return "✓ This argument follows Modus Ponens and is valid.";
                 }
+
+                // ❌ Detect **Affirming the Consequent (Invalid)**
                 if (secondPremise === thenClause && derivedConclusion === ifClause) {
-                    return "X Invalid: Affirming the Consequent Fallacy";
-                }
-                if (secondPremise.startsWith("not") && derivedConclusion.startsWith("not") && ifClause === derivedConclusion.replace("not ", "")) {
-                    return "✓ Valid: Modus Tollens";
+                    return "X This argument is invalid. (Affirming the Consequent Fallacy).";
                 }
             }
 
-            if (lowerForm.includes("either") && lowerForm.includes("not") && lowerForm.includes("therefore")) {
-                return "✓ Valid: Disjunctive Syllogism";
-            }
-            if (lowerForm.includes("if") && lowerForm.includes("then") && (lowerForm.match(/if (.*?), then (.*)/g) || []).length === 2) {
-                return "✓ Valid: Hypothetical Syllogism";
-            }
-            if (lowerForm.includes("all") && lowerForm.includes("are") && lowerForm.includes("therefore")) {
-                return "✓ Valid: Categorical Syllogism";
-            }
-
-            return "X Invalid: The conclusion does not logically follow from the premises.";
+            return "X This argument is invalid. The conclusion does not logically follow from the premises.";
         }
 
         function classifyArgumentType(argument) {
             const lowerCaseArg = argument.toLowerCase();
             if ((lowerCaseArg.match(/if/gi) || []).length >= 2 && (lowerCaseArg.match(/then/gi) || []).length >= 2) {
-                return "Deductive";
+                return "Deductive"; // Hypothetical Syllogism
             } 
             if (lowerCaseArg.includes("if") && lowerCaseArg.includes("then")) {
-                return "Deductive";
+                return "Deductive"; // Modus Ponens or Modus Tollens
             }
             if (lowerCaseArg.includes("or") && lowerCaseArg.includes("not")) {
-                return "Deductive";
+                return "Deductive"; // Disjunctive Syllogism
             }
             return "Inductive";
         }
 
         async function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value;
-            document.getElementById('output').innerText = "Analyzing...";
+            document.getElementById('output').innerText = "Analyzing with AI...";
             
             let { premises, conclusion } = extractStandardForm(argument);
             let argumentType = classifyArgumentType(argument);
