@@ -69,12 +69,27 @@
             return result[0] > result[1] ? "✓ AI Analysis: This argument is likely valid." : "X AI Analysis: This argument is likely invalid.";
         }
 
+        function classifyArgumentType(argument) {
+            return argument.includes("if") && argument.includes("then") ? "Deductive" : "Inductive";
+        }
+
+        function evaluateStrength(argument) {
+            return classifyArgumentType(argument) === "Deductive" ? "N/A (Deductive arguments are not evaluated for strength)." : (argument.includes("most likely") || argument.includes("probably") ? "✓ Strong." : "X Weak.");
+        }
+
         async function analyzeArgument() {
             const argument = document.getElementById('argumentInput').value;
             document.getElementById('output').innerText = "Analyzing with AI...";
 
             let aiResult = await analyzeArgumentWithAI(argument);
-            document.getElementById('output').innerText = aiResult;
+            let argumentType = classifyArgumentType(argument);
+            let strength = evaluateStrength(argument);
+
+            document.getElementById('output').innerHTML = `
+                <b>Type:</b> ${argumentType}<br>
+                <b>Strength:</b> ${strength}<br>
+                <b>Analysis:</b> ${aiResult}
+            `;
         }
     </script>
 </body>
