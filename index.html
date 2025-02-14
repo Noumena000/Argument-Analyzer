@@ -5,42 +5,42 @@ function standardizeArgument() {
         return;
     }
 
-    // Expanded conclusion indicators
+    // Expanded list of conclusion indicators
     const conclusionIndicators = [
         "therefore", "thus", "hence", "so", "consequently",
         "it follows that", "we can conclude that", "which means that",
         "this implies that", "ergo", "accordingly", "as a result"
     ];
 
-    // Improve sentence splitting: Keep commas intact
-    let sentences = argument.split(/(?<=\.|\?|!)\s+/);
+    // Split sentences properly (supports commas, semicolons, periods)
+    let sentences = argument.split(/(?<=[.?!;])\s+/);
     let premises = [];
     let conclusion = "";
 
-    for (let i = 0; i < sentences.length; i++) {
-        let sentence = sentences[i].trim();
-        let lowerSentence = sentence.toLowerCase();
-
-        // Ensure conclusions are captured as full sentences
+    for (let sentence of sentences) {
+        let lowerSentence = sentence.toLowerCase().trim();
+        
         if (conclusionIndicators.some(word => lowerSentence.includes(word))) {
-            conclusion = sentence;
-            // If the conclusion was split, add the next sentence (if it exists)
-            if (i + 1 < sentences.length) {
-                conclusion += " " + sentences[i + 1];
-                i++; // Skip the next sentence since it's part of the conclusion
-            }
+            conclusion = sentence; // Store detected conclusion
         } else {
             premises.push(sentence);
         }
     }
 
-    // Ensure last sentence is the conclusion if none was explicitly detected
+    // Ensure all premises are correctly captured
+    if (premises.length === 0 && conclusion) {
+        premises.push(conclusion);
+        conclusion = "";
+    }
+
+    // If no conclusion is explicitly detected, allow the last premise to be the conclusion
     if (!conclusion && premises.length > 1) {
         conclusion = premises.pop();
     }
 
     // Format the output
     let output = "<strong>Standard Form:</strong><br><br>";
+    
     premises.forEach((premise, index) => {
         output += `(P${index + 1}) ${premise}<br>`;
     });
