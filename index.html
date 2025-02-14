@@ -69,19 +69,14 @@
                 outputHTML += `<p><strong>Conclusion:</strong> Not explicitly found.</p>`;
             }
 
-            let isValid = checkValidity(premises, conclusions);
-            if (isValid) {
-                outputHTML += `<p class='valid'>✔ This argument is logically valid.</p>`;
-            } else {
-                outputHTML += `<p class='invalid'>✖ This argument is invalid.</p>`;
-                outputHTML += `<p><strong>Why?</strong> The conclusion does not logically follow from the premises. Check for missing premises or faulty reasoning.</p>`;
-            }
+            let validityResult = checkValidity(premises, conclusions);
+            outputHTML += validityResult;
 
             document.getElementById("output").innerHTML = outputHTML;
         }
 
         function checkValidity(premises, conclusions) {
-            if (premises.length < 2 || conclusions.length === 0) return false;
+            if (premises.length < 2 || conclusions.length === 0) return "<p class='invalid'>❌ Insufficient premises to determine validity.</p>";
 
             let lowerPremises = premises.map(p => p.toLowerCase());
             let lowerConclusions = conclusions.map(c => c.toLowerCase());
@@ -100,7 +95,19 @@
                                         lowerPremises[1].includes("if") && lowerPremises[1].includes("then") &&
                                         lowerConclusions.some(c => c.includes("if") && c.includes("then"));
 
-            return modusPonens || modusTollens || hypotheticalSyllogism;
+            // Check for Denying the Antecedent (Invalid Argument: If P then Q, Not P, therefore Not Q)
+            let denyingAntecedent = lowerPremises.some(p => p.includes("if") && p.includes("then")) &&
+                                    lowerPremises.some(p => p.includes("not") && lowerConclusions.some(c => !c.includes("if") && !c.includes("then")));
+
+            if (denyingAntecedent) {
+                return "<p class='invalid'>✖ This argument is invalid.</p><p><strong>Why?</strong> This is an example of 'Denying the Antecedent,' which is not a valid logical form.</p>";
+            }
+
+            if (modusPonens || modusTollens || hypotheticalSyllogism) {
+                return "<p class='valid'>✔ This argument is logically valid.</p>";
+            }
+
+            return "<p class='invalid'>✖ This argument is invalid.</p><p><strong>Why?</strong> The conclusion does not logically follow from the premises. Check for missing premises or faulty reasoning.</p>";
         }
 
         function clearInput() {
