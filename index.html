@@ -1,1 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Argument Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #343a40;
+        }
+        textarea {
+            width: 80%;
+            height: 150px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        #response {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
 
+    <h1>AI Argument Analyzer</h1>
+    <p>Enter your argument below, and the AI will analyze its logical structure.</p>
+
+    <textarea id="argumentInput" placeholder="Type your argument here..."></textarea>
+    <br>
+    <button onclick="analyzeArgument()">Analyze</button>
+
+    <div id="response"></div>
+
+    <script>
+        async function analyzeArgument() {
+            const argument = document.getElementById("argumentInput").value;
+            if (!argument) {
+                alert("Please enter an argument.");
+                return;
+            }
+
+            document.getElementById("response").innerText = "Analyzing argument...";
+
+            // This must be replaced with a real external API that processes arguments
+            const apiUrl = "https://your-external-api.com/analyze"; // External AI service
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ text: argument })
+                });
+
+                const result = await response.json();
+                document.getElementById("response").innerText = result.analysis || "Analysis failed.";
+            } catch (error) {
+                document.getElementById("response").innerText = "Error analyzing argument.";
+            }
+        }
+    </script>
+
+</body>
+</html>
